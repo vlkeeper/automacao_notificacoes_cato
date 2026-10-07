@@ -1,0 +1,71 @@
+{
+  "data": {
+    "accountSnapshot": {
+      "id": "1",
+      "timestamp": "2026-10-06T12:00:00Z",
+      "sites": [
+        {
+          "id": "1",
+          "connectivityStatus": "connected",
+          "operationalStatus": "active",
+          "lastConnected": "2026-10-06T10:00:00Z",
+          "info": {
+            "name": "Site A",
+            "isHA": false
+          },
+          "devices": [
+            {
+              "id": "d1",
+              "haRole": null,
+              "connected": true,
+              "socketInfo": {
+                "id": "s-1",
+                "serial": null,
+                "isPrimary": true
+              },
+              "interfaces": [
+                {
+                  "id": "WAN1",
+                  "name": "WAN1 - Operadora X",
+                  "connected": true,
+                  "tunnelUptime": 100
+                },
+                {
+                  "id": "WAN2",
+                  "name": "WAN2 - Operadora Y",
+                  "connected": true,
+                  "tunnelUptime": 100
+                }
+              ],
+              "interfacesLinkState": [
+                {
+                  "id": "LAN1",
+                  "up": true
+                },
+                {
+                  "id": "WAN1",
+                  "up": true
+                },
+                {
+                  "id": "WAN2",
+                  "up": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "2",
+          "connectivityStatus": "disconnected",
+          "operationalStatus": "active",
+          "lastConnected": "2026-10-06T10:00:00Z",
+          "info": {
+            "name": "Site B",
+            "isHA": false
+          },
+          "devices": []
+        }
+      ]
+    }
+  }
+}

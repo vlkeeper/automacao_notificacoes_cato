@@ -1,0 +1,59 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.4",
+  "msteams": {
+    "width": "Full"
+  },
+  "body": [
+    {
+      "type": "Container",
+      "style": "good",
+      "bleed": true,
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "🟢 SITE DE VOLTA",
+          "wrap": true,
+          "size": "Large",
+          "weight": "Bolder"
+        }
+      ]
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        {
+          "title": "Site:",
+          "value": "Filial Campinas"
+        },
+        {
+          "title": "Desde:",
+          "value": "06/10/2026 10:00"
+        },
+        {
+          "title": "Duração:",
+          "value": "1 h 25 min"
+        }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "O site voltou após 1 h 25 min.",
+      "wrap": true
+    },
+    {
+      "type": "TextBlock",
+      "text": "Ainda fora: WAN2 - Operadora B (WAN)",
+      "wrap": true,
+      "weight": "Bolder"
+    },
+    {
+      "type": "TextBlock",
+      "text": "Ref. evt-000123",
+      "wrap": true,
+      "isSubtle": true,
+      "size": "Small"
+    }
+  ]
+}

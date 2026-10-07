@@ -1,25 +1,37 @@
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-venv/
-.venv/
+# Segredos
+.env
+.env.*
+!.env.example
+
+# Controle de versão e documentação de design
 .git/
 .gitignore
 .dockerignore
-.env
-.env.*
-estado_links.json
-estado_links.json.tmp
-data/
-tests/
-.pytest_cache/
 specs/
 .specify/
+.claude/
 .agents/
 .gemini/
+
+# Testes e caches
+tests/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Ambientes virtuais e estado local
+.venv/
+venv/
+env/
+state.json*
+last_cycle
+monitor.lock
+data/
+
+# Outros
 *.log
+.vscode/
+.idea/
 .DS_Store
 Thumbs.db

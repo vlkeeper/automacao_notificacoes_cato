@@ -1,0 +1,27 @@
+services:
+  monitor:
+    build: .
+    image: cato-monitor:0.1.0
+    restart: unless-stopped
+    init: true                      # repassa SIGTERM ao processo (encerramento limpo)
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    env_file: .env                  # segredos só aqui; nunca no Dockerfile
+    environment:
+      STATE_DIR: /data
+    volumes:
+      - monitor-data:/data
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    # Instância única: não use deploy.replicas nem --scale (o lock em /data/monitor.lock recusa a 2ª).
+
+volumes:
+  monitor-data:

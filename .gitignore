@@ -1,29 +1,32 @@
-.agents/
-.gemini/
-
-# Credenciais
+# Segredos
 .env
-.env.example
+.env.*
+!.env.example
 
-# Arquivos de Estado e Dados
-estado_links.json
-estado_links.json.tmp
+# Estado do monitor (gerado em execução)
+state.json*
+last_cycle
+monitor.lock
 /data/
 
-# Cache e Arquivos Py
+# Python
 __pycache__/
-.pytest_cache/
 *.py[cod]
 *$py.class
 *.so
+*.egg-info/
+.pytest_cache/
 
-# Ambientes Virtuais
+# Ambientes virtuais
 venv/
 .venv/
 env/
-.env_dir/
 
-# IDEs e Arquivos de SO
+# Agentes locais
+.agents/
+.gemini/
+
+# IDEs e SO
 .vscode/
 .idea/
 .DS_Store

@@ -1,0 +1,57 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.4",
+  "msteams": {
+    "width": "Full"
+  },
+  "body": [
+    {
+      "type": "Container",
+      "style": "warning",
+      "bleed": true,
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "🟠 LINK OFFLINE",
+          "wrap": true,
+          "size": "Large",
+          "weight": "Bolder"
+        }
+      ]
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        {
+          "title": "Site:",
+          "value": "Filial Campinas"
+        },
+        {
+          "title": "Link:",
+          "value": "WAN2 - Operadora B (WAN)"
+        },
+        {
+          "title": "Desde:",
+          "value": "06/10/2026 10:00"
+        },
+        {
+          "title": "Há quanto tempo:",
+          "value": "1 h 25 min"
+        }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "Um dos links do site **Filial Campinas** caiu. O site continua funcionando pelos outros links (operação parcial).",
+      "wrap": true
+    },
+    {
+      "type": "TextBlock",
+      "text": "Ref. evt-000123",
+      "wrap": true,
+      "isSubtle": true,
+      "size": "Small"
+    }
+  ]
+}

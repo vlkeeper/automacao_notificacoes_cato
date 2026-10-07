@@ -1,0 +1,53 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.4",
+  "msteams": {
+    "width": "Full"
+  },
+  "body": [
+    {
+      "type": "Container",
+      "style": "emphasis",
+      "bleed": true,
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "⚙️ MONITOR: ACESSO NORMALIZADO",
+          "wrap": true,
+          "size": "Large",
+          "weight": "Bolder"
+        }
+      ]
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        {
+          "title": "Sem acesso desde:",
+          "value": "06/10/2026 11:20"
+        },
+        {
+          "title": "Normalizado em:",
+          "value": "06/10/2026 11:25"
+        },
+        {
+          "title": "Falhas seguidas:",
+          "value": "6"
+        }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "A consulta à Cato voltou a funcionar às 11:25.",
+      "wrap": true
+    },
+    {
+      "type": "TextBlock",
+      "text": "Ref. evt-000123",
+      "wrap": true,
+      "isSubtle": true,
+      "size": "Small"
+    }
+  ]
+}

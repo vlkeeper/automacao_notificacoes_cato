@@ -1,0 +1,57 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.4",
+  "msteams": {
+    "width": "Full"
+  },
+  "body": [
+    {
+      "type": "Container",
+      "style": "good",
+      "bleed": true,
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "🟢 LINK DE VOLTA",
+          "wrap": true,
+          "size": "Large",
+          "weight": "Bolder"
+        }
+      ]
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        {
+          "title": "Site:",
+          "value": "Filial Campinas"
+        },
+        {
+          "title": "Link:",
+          "value": "WAN2 - Operadora B (WAN)"
+        },
+        {
+          "title": "Desde:",
+          "value": "06/10/2026 11:13"
+        },
+        {
+          "title": "Duração:",
+          "value": "12 min"
+        }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "O link voltou após 12 min.",
+      "wrap": true
+    },
+    {
+      "type": "TextBlock",
+      "text": "Ref. evt-000123",
+      "wrap": true,
+      "isSubtle": true,
+      "size": "Small"
+    }
+  ]
+}

@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cato-monitor/state-file/v1",
+  "title": "Estado persistido do monitor Cato (state.json)",
+  "type": "object",
+  "required": ["schema_version", "atualizado_em", "monitor", "sites", "pendente_envio"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "atualizado_em": { "$ref": "#/$defs/ts" },
+    "monitor": {
+      "type": "object",
+      "required": ["falhas_consecutivas", "alerta_falha_enviado", "ultimo_ciclo_concluido_em", "ultima_consulta_ok_em", "ultimo_lembrete_data", "proximo_seq"],
+      "additionalProperties": false,
+      "properties": {
+        "falhas_consecutivas": { "type": "integer", "minimum": 0 },
+        "alerta_falha_enviado": { "type": "boolean" },
+        "ultimo_ciclo_concluido_em": { "$ref": "#/$defs/ts_ou_null" },
+        "ultima_consulta_ok_em": { "$ref": "#/$defs/ts_ou_null" },
+        "ultimo_lembrete_data": { "type": ["string", "null"], "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "proximo_seq": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "sites": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/site" }
+    },
+    "pendente_envio": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/evento" }
+    }
+  },
+  "$defs": {
+    "ts": { "type": "string", "format": "date-time", "pattern": "\\+00:00$" },
+    "ts_ou_null": { "anyOf": [{ "$ref": "#/$defs/ts" }, { "type": "null" }] },
+    "estado": { "enum": ["ONLINE", "PENDENTE_OFFLINE", "OFFLINE_NOTIFICADO"] },
+    "item_base": {
+      "type": "object",
+      "required": ["nome", "estado", "inicio_queda", "notificado", "origem", "ausencias"],
+      "properties": {
+        "nome": { "type": "string", "minLength": 1 },
+        "estado": { "$ref": "#/$defs/estado" },
+        "inicio_queda": { "$ref": "#/$defs/ts_ou_null" },
+        "notificado": { "type": "boolean" },
+        "origem": { "enum": ["observado", "linha_base"] },
+        "ausencias": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "link": {
+      "allOf": [{ "$ref": "#/$defs/item_base" }],
+      "required": ["tipo", "socket", "coberto_pelo_site"],
+      "properties": {
+        "tipo": { "enum": ["WAN", "LAN"] },
+        "socket": { "type": "string" },
+        "coberto_pelo_site": { "type": "boolean" }
+      }
+    },
+    "site": {
+      "allOf": [{ "$ref": "#/$defs/item_base" }],
+      "required": ["links"],
+      "properties": {
+        "links": { "type": "object", "additionalProperties": { "$ref": "#/$defs/link" } }
+      }
+    },
+    "evento": {
+      "type": "object",
+      "required": ["id", "tipo", "ocorrido_em", "criado_em", "tentativas", "ultimo_erro", "dados"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^evt-\\d{6,}$" },
+        "tipo": { "enum": ["LINK_OFFLINE", "SITE_OFFLINE", "LINK_RETORNO", "SITE_RETORNO", "LEMBRETE_DIARIO", "MONITOR_FALHA", "MONITOR_RECUPERADO", "MONITOR_INICIADO"] },
+        "ocorrido_em": { "$ref": "#/$defs/ts" },
+        "criado_em": { "$ref": "#/$defs/ts" },
+        "tentativas": { "type": "integer", "minimum": 0 },
+        "ultimo_erro": { "type": ["string", "null"] },
+        "dados": { "type": "object" }
+      }
+    }
+  },
+  "examples": [
+    {
+      "schema_version": 1,
+      "atualizado_em": "2026-10-06T11:02:00+00:00",
+      "monitor": {
+        "falhas_consecutivas": 0,
+        "alerta_falha_enviado": false,
+        "ultimo_ciclo_concluido_em": "2026-10-06T11:02:00+00:00",
+        "ultima_consulta_ok_em": "2026-10-06T11:02:00+00:00",
+        "ultimo_lembrete_data": "2026-10-06",
+        "proximo_seq": 43
+      },
+      "sites": {
+        "1001": {
+          "nome": "Filial Campinas",
+          "estado": "ONLINE",
+          "inicio_queda": null,
+          "notificado": false,
+          "origem": "observado",
+          "ausencias": 0,
+          "links": {
+            "s-77/WAN1": { "nome": "WAN1 - Operadora A", "tipo": "WAN", "socket": "primário", "estado": "ONLINE", "inicio_queda": null, "notificado": false, "coberto_pelo_site": false, "origem": "observado", "ausencias": 0 },
+            "s-77/WAN2": { "nome": "WAN2 - Operadora B", "tipo": "WAN", "socket": "primário", "estado": "OFFLINE_NOTIFICADO", "inicio_queda": "2026-10-05T22:14:00+00:00", "notificado": true, "coberto_pelo_site": false, "origem": "observado", "ausencias": 0 }
+          }
+        }
+      },
+      "pendente_envio": []
+    }
+  ]
+}

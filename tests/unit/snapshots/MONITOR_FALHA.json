@@ -1,0 +1,53 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.4",
+  "msteams": {
+    "width": "Full"
+  },
+  "body": [
+    {
+      "type": "Container",
+      "style": "emphasis",
+      "bleed": true,
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "⚙️ MONITOR: SEM ACESSO À CATO",
+          "wrap": true,
+          "size": "Large",
+          "weight": "Bolder"
+        }
+      ]
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        {
+          "title": "Falhas seguidas:",
+          "value": "5"
+        },
+        {
+          "title": "Desde:",
+          "value": "06/10/2026 11:20"
+        },
+        {
+          "title": "Último motivo:",
+          "value": "http_503"
+        }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "O monitor não consegue consultar a Cato desde 11:20. **Nenhum alerta de queda será emitido até normalizar.** Isso não significa que algum site caiu.",
+      "wrap": true
+    },
+    {
+      "type": "TextBlock",
+      "text": "Ref. evt-000123",
+      "wrap": true,
+      "isSubtle": true,
+      "size": "Small"
+    }
+  ]
+}
