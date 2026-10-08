@@ -1,13 +1,47 @@
-# Segredos
+# Segredos (tokens Cato, webhook do Teams)
 .env
 .env.*
 !.env.example
+*.env
+secrets/
+.secrets/
+secrets.*
+credentials*
+*.token
+.netrc
+.pypirc
+
+# Chaves e certificados privados (a CA pública em certs/*.cer continua versionada)
+*.pem
+*.key
+*.pfx
+*.p12
+*.jks
+*.keystore
+*.crt.key
+id_rsa*
+id_ed25519*
+
+# Overrides locais do Docker (podem conter segredos)
+docker-compose.override.yml
+docker-compose.*.local.yml
 
 # Estado do monitor (gerado em execução)
 state.json*
 last_cycle
 monitor.lock
 /data/
+
+# Logs, dumps e backups (podem vazar dados da conta/rede)
+*.log
+logs/
+*.bak
+*.orig
+*.swp
+*.sqlite
+*.sqlite3
+*.db
+*.dump
 
 # Python
 __pycache__/
@@ -16,15 +50,26 @@ __pycache__/
 *.so
 *.egg-info/
 .pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
 
 # Ambientes virtuais
 venv/
 .venv/
 env/
 
-# Agentes locais
+# Agentes locais (configs locais podem conter permissões/tokens)
 .agents/
 .gemini/
+.claude/
+.specify/
+.claude/settings.local.json
+CLAUDE.local.md
 
 # IDEs e SO
 .vscode/
