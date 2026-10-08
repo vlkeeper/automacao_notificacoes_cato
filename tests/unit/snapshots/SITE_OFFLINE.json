@@ -30,23 +30,19 @@
         {
           "title": "Desde:",
           "value": "06/10/2026 10:00"
-        },
-        {
-          "title": "Há quanto tempo:",
-          "value": "1 h 25 min"
         }
       ]
     },
     {
       "type": "TextBlock",
-      "text": "O site **Filial Campinas** está sem conexão. Todos os links estão fora.",
+      "text": "O site **Filial Campinas** está sem conexão. Todas as redes estão fora.",
       "wrap": true
     },
     {
       "type": "TextBlock",
-      "text": "Links afetados: WAN1 - Operadora A (WAN), LAN1 (LAN)",
+      "text": "Redes afetadas: WAN1 - Operadora A (WAN), LAN1 (LAN)",
       "wrap": true,
-      "isSubtle": true
+      "weight": "Bolder"
     },
     {
       "type": "TextBlock",

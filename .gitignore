@@ -31,3 +31,6 @@ env/
 .idea/
 .DS_Store
 Thumbs.db
+
+# prévias de cards geradas por scripts/previa_cards.py
+previas/

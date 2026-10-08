@@ -12,13 +12,14 @@ from typing import Any
 from .modelos import EventoNotificacao, TipoEvento, str_para_ts
 
 LIMITE_BYTES_CARD = 24 * 1024
+SEP = chr(10) * 2  # quebra de linha entre itens num mesmo TextBlock
 
 # tipo -> (emoji, título, style do Container)
 ESTILOS: dict[TipoEvento, tuple[str, str, str]] = {
     TipoEvento.SITE_OFFLINE: ("🔴", "SITE OFFLINE", "attention"),
-    TipoEvento.LINK_OFFLINE: ("🟠", "LINK OFFLINE", "warning"),
+    TipoEvento.LINK_OFFLINE: ("🟠", "REDE OFFLINE", "warning"),
     TipoEvento.SITE_RETORNO: ("🟢", "SITE DE VOLTA", "good"),
-    TipoEvento.LINK_RETORNO: ("🟢", "LINK DE VOLTA", "good"),
+    TipoEvento.LINK_RETORNO: ("🟢", "REDE DE VOLTA", "good"),
     TipoEvento.LEMBRETE_DIARIO: ("📋", "PENDÊNCIAS DO DIA", "accent"),
     TipoEvento.MONITOR_FALHA: ("⚙️", "MONITOR: SEM ACESSO À CATO", "emphasis"),
     TipoEvento.MONITOR_RECUPERADO: ("⚙️", "MONITOR: ACESSO NORMALIZADO", "emphasis"),
@@ -87,13 +88,12 @@ def _link_offline(e: EventoNotificacao, tz: tzinfo) -> list[dict[str, Any]]:
     return [
         _fatos(
             ("Site", d["site_nome"]),
-            ("Link", _link_txt(d["link_nome"], d["link_tipo"])),
+            ("Porta", _link_txt(d["link_nome"], d["link_tipo"])),
             ("Desde", formatar_horario(inicio, tz)),
-            ("Há quanto tempo", formatar_duracao((e.ocorrido_em - inicio).total_seconds())),
-        ),
+            ),
         _texto(
-            f"Um dos links do site **{d['site_nome']}** caiu. "
-            "O site continua funcionando pelos outros links (operação parcial)."
+            f"Uma das redes do site **{d['site_nome']}** caiu. "
+            "O site continua funcionando pelas demais redes (operação parcial)."
         ),
     ]
 
@@ -105,13 +105,12 @@ def _site_offline(e: EventoNotificacao, tz: tzinfo) -> list[dict[str, Any]]:
         _fatos(
             ("Site", d["site_nome"]),
             ("Desde", formatar_horario(inicio, tz)),
-            ("Há quanto tempo", formatar_duracao((e.ocorrido_em - inicio).total_seconds())),
         ),
-        _texto(f"O site **{d['site_nome']}** está sem conexão. Todos os links estão fora."),
+        _texto(f"O site **{d['site_nome']}** está sem conexão. Todas as redes estão fora."),
     ]
     if d.get("links_afetados"):
         lista = ", ".join(_link_txt(n, t) for n, t in d["links_afetados"])
-        corpo.append(_texto(f"Links afetados: {lista}", isSubtle=True))
+        corpo.append(_texto(f"Redes afetadas: {lista}", weight="Bolder"))
     return corpo
 
 
@@ -122,11 +121,11 @@ def _link_retorno(e: EventoNotificacao, tz: tzinfo) -> list[dict[str, Any]]:
     return [
         _fatos(
             ("Site", d["site_nome"]),
-            ("Link", _link_txt(d["link_nome"], d["link_tipo"])),
+            ("Porta", _link_txt(d["link_nome"], d["link_tipo"])),
             ("Desde", formatar_horario(inicio, tz)),
             ("Duração", duracao),
         ),
-        _texto(f"O link voltou após {duracao}."),
+        _texto(f"A porta voltou após {duracao}."),
     ]
 
 
@@ -152,31 +151,30 @@ def _coluna(texto: str, largura: str, **extra: Any) -> dict[str, Any]:
     return {"type": "Column", "width": largura, "items": [_texto(texto, size="Small", **extra)]}
 
 
+def _tabela(cabecalhos: tuple[str, ...], linhas: list[tuple[str, ...]], larguras: tuple[str, ...]) -> list[dict[str, Any]]:
+    """Tabela com colunas de largura proporcional fixa (as mesmas em todas as linhas, para alinhar)."""
+    def linha(celulas: tuple[str, ...], **extra: Any) -> dict[str, Any]:
+        return {"type": "ColumnSet", **extra.pop("conj", {}),
+                "columns": [_coluna(c, w, **extra) for c, w in zip(celulas, larguras)]}
+
+    return [
+        linha(cabecalhos, weight="Bolder", conj={"style": "emphasis", "bleed": False}),
+        *[linha(cel, conj={"separator": True}) for cel in linhas],
+    ]
+
+
 def _lembrete(e: EventoNotificacao, tz: tzinfo) -> list[dict[str, Any]]:
     d = e.dados
     pendencias = d["pendencias"]
     sufixo = f" (parte {d['parte']}/{d['total_partes']})" if d["total_partes"] > 1 else ""
-    corpo = [
-        _texto(f"Itens que continuam fora hoje ({len(pendencias)} nesta mensagem){sufixo}:"),
-        {
-            "type": "ColumnSet",
-            "columns": [_coluna(t, l, weight="Bolder")
-                        for t, l in (("Site", "stretch"), ("Link", "stretch"), ("Desde", "auto"), ("Há quanto tempo", "auto"))],
-        },
-    ]
+    corpo = [_texto(f"Itens que continuam fora hoje ({len(pendencias)} nesta mensagem){sufixo}:")]
+    linhas = []
     for p in pendencias:
         inicio = _ts(p["inicio_queda"])
-        link = _link_txt(p["link_nome"], p["tipo"]) if p["link_nome"] else "Site inteiro"
-        corpo.append({
-            "type": "ColumnSet",
-            "separator": True,
-            "columns": [
-                _coluna(p["site_nome"], "stretch"),
-                _coluna(link, "stretch"),
-                _coluna(formatar_horario(inicio, tz), "auto"),
-                _coluna(formatar_duracao((e.ocorrido_em - inicio).total_seconds()), "auto"),
-            ],
-        })
+        porta = _link_txt(p["link_nome"], p["tipo"]) if p["link_nome"] else "Site inteiro"
+        linhas.append((p["site_nome"], porta, formatar_horario(inicio, tz),
+                       formatar_duracao((e.ocorrido_em - inicio).total_seconds())))
+    corpo += _tabela(("Site", "Porta", "Desde", "Há quanto tempo"), linhas, ("4", "4", "3", "3"))
     return corpo
 
 
@@ -217,11 +215,14 @@ def _monitor_iniciado(e: EventoNotificacao, tz: tzinfo) -> list[dict[str, Any]]:
     texto = f"Monitorando {d['sites_total']} sites e {d['links_total']} links."
     corpo = [_texto(texto)]
     if d["itens_offline"]:
-        itens = ", ".join(
-            f"{i['site_nome']}" + (f" / {_link_txt(i['link_nome'], i['tipo'])}" if i["link_nome"] else " (site inteiro)")
-            for i in d["itens_offline"]
-        )
-        corpo.append(_texto(f"Já estavam fora no início: {itens}"))
+        # Agrupa por site (ordem de chegada): uma linha da tabela por site, com as portas offline.
+        portas_por_site: dict[str, list[str]] = {}
+        for i in d["itens_offline"]:
+            portas = portas_por_site.setdefault(i["site_nome"], [])
+            portas.append(_link_txt(i["link_nome"], i["tipo"]) if i["link_nome"] else "Site inteiro (todos os links)")
+        corpo.append(_texto("Já estavam fora no início:", weight="Bolder"))
+        corpo += _tabela(("Site", "Portas offline"),
+                         [(site, SEP.join(portas)) for site, portas in portas_por_site.items()], ("1", "1"))
     return corpo
 
 

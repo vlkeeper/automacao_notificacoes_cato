@@ -27,8 +27,102 @@
     },
     {
       "type": "TextBlock",
-      "text": "Já estavam fora no início: Filial Campinas / WAN2 - Operadora B (WAN), Filial Recife (site inteiro)",
-      "wrap": true
+      "text": "Já estavam fora no início:",
+      "wrap": true,
+      "weight": "Bolder"
+    },
+    {
+      "type": "ColumnSet",
+      "style": "emphasis",
+      "bleed": false,
+      "columns": [
+        {
+          "type": "Column",
+          "width": "1",
+          "items": [
+            {
+              "type": "TextBlock",
+              "text": "Site",
+              "wrap": true,
+              "size": "Small",
+              "weight": "Bolder"
+            }
+          ]
+        },
+        {
+          "type": "Column",
+          "width": "1",
+          "items": [
+            {
+              "type": "TextBlock",
+              "text": "Portas offline",
+              "wrap": true,
+              "size": "Small",
+              "weight": "Bolder"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "ColumnSet",
+      "separator": true,
+      "columns": [
+        {
+          "type": "Column",
+          "width": "1",
+          "items": [
+            {
+              "type": "TextBlock",
+              "text": "Filial Campinas",
+              "wrap": true,
+              "size": "Small"
+            }
+          ]
+        },
+        {
+          "type": "Column",
+          "width": "1",
+          "items": [
+            {
+              "type": "TextBlock",
+              "text": "WAN2 - Operadora B (WAN)",
+              "wrap": true,
+              "size": "Small"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "ColumnSet",
+      "separator": true,
+      "columns": [
+        {
+          "type": "Column",
+          "width": "1",
+          "items": [
+            {
+              "type": "TextBlock",
+              "text": "Filial Recife",
+              "wrap": true,
+              "size": "Small"
+            }
+          ]
+        },
+        {
+          "type": "Column",
+          "width": "1",
+          "items": [
+            {
+              "type": "TextBlock",
+              "text": "Site inteiro (todos os links)",
+              "wrap": true,
+              "size": "Small"
+            }
+          ]
+        }
+      ]
     },
     {
       "type": "TextBlock",

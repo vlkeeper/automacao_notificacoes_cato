@@ -27,10 +27,12 @@
     },
     {
       "type": "ColumnSet",
+      "style": "emphasis",
+      "bleed": false,
       "columns": [
         {
           "type": "Column",
-          "width": "stretch",
+          "width": "4",
           "items": [
             {
               "type": "TextBlock",
@@ -43,11 +45,11 @@
         },
         {
           "type": "Column",
-          "width": "stretch",
+          "width": "4",
           "items": [
             {
               "type": "TextBlock",
-              "text": "Link",
+              "text": "Porta",
               "wrap": true,
               "size": "Small",
               "weight": "Bolder"
@@ -56,7 +58,7 @@
         },
         {
           "type": "Column",
-          "width": "auto",
+          "width": "3",
           "items": [
             {
               "type": "TextBlock",
@@ -69,7 +71,7 @@
         },
         {
           "type": "Column",
-          "width": "auto",
+          "width": "3",
           "items": [
             {
               "type": "TextBlock",
@@ -88,7 +90,7 @@
       "columns": [
         {
           "type": "Column",
-          "width": "stretch",
+          "width": "4",
           "items": [
             {
               "type": "TextBlock",
@@ -100,7 +102,7 @@
         },
         {
           "type": "Column",
-          "width": "stretch",
+          "width": "4",
           "items": [
             {
               "type": "TextBlock",
@@ -112,7 +114,7 @@
         },
         {
           "type": "Column",
-          "width": "auto",
+          "width": "3",
           "items": [
             {
               "type": "TextBlock",
@@ -124,7 +126,7 @@
         },
         {
           "type": "Column",
-          "width": "auto",
+          "width": "3",
           "items": [
             {
               "type": "TextBlock",
@@ -142,7 +144,7 @@
       "columns": [
         {
           "type": "Column",
-          "width": "stretch",
+          "width": "4",
           "items": [
             {
               "type": "TextBlock",
@@ -154,7 +156,7 @@
         },
         {
           "type": "Column",
-          "width": "stretch",
+          "width": "4",
           "items": [
             {
               "type": "TextBlock",
@@ -166,7 +168,7 @@
         },
         {
           "type": "Column",
-          "width": "auto",
+          "width": "3",
           "items": [
             {
               "type": "TextBlock",
@@ -178,7 +180,7 @@
         },
         {
           "type": "Column",
-          "width": "auto",
+          "width": "3",
           "items": [
             {
               "type": "TextBlock",

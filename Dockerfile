@@ -18,6 +18,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 RUN useradd --system --uid 10001 --no-create-home --shell /usr/sbin/nologin monitor \
     && mkdir /data && chown monitor:monitor /data
 COPY --from=builder /opt/venv /opt/venv
+# CAs adicionais (ex.: inspeção de TLS da rede). Opcional: sem arquivos *.crt em certs/ nada muda.
+# São anexadas ao bundle do certifi, que o `requests` usa (certificados públicos, sem segredo).
+COPY certs /tmp/certs
+RUN for f in /tmp/certs/*.crt /tmp/certs/*.cer /tmp/certs/*.pem; do         [ -e "$f" ] || continue;         { openssl x509 -in "$f" 2>/dev/null || openssl x509 -inform DER -in "$f"; }             >> "$(python -c 'import certifi; print(certifi.where())')" || exit 1;     done; rm -rf /tmp/certs
 WORKDIR /app
 COPY src ./src
 USER monitor

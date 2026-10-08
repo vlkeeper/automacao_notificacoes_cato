@@ -13,7 +13,7 @@
       "items": [
         {
           "type": "TextBlock",
-          "text": "🟠 LINK OFFLINE",
+          "text": "🟠 REDE OFFLINE",
           "wrap": true,
           "size": "Large",
           "weight": "Bolder"
@@ -28,22 +28,18 @@
           "value": "Filial Campinas"
         },
         {
-          "title": "Link:",
+          "title": "Porta:",
           "value": "WAN2 - Operadora B (WAN)"
         },
         {
           "title": "Desde:",
           "value": "06/10/2026 10:00"
-        },
-        {
-          "title": "Há quanto tempo:",
-          "value": "1 h 25 min"
         }
       ]
     },
     {
       "type": "TextBlock",
-      "text": "Um dos links do site **Filial Campinas** caiu. O site continua funcionando pelos outros links (operação parcial).",
+      "text": "Uma das redes do site **Filial Campinas** caiu. O site continua funcionando pelas demais portas (operação parcial).",
       "wrap": true
     },
     {

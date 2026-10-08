@@ -13,7 +13,7 @@
       "items": [
         {
           "type": "TextBlock",
-          "text": "🟢 LINK DE VOLTA",
+          "text": "🟢 REDE DE VOLTA",
           "wrap": true,
           "size": "Large",
           "weight": "Bolder"
@@ -28,7 +28,7 @@
           "value": "Filial Campinas"
         },
         {
-          "title": "Link:",
+          "title": "Porta:",
           "value": "WAN2 - Operadora B (WAN)"
         },
         {
@@ -43,7 +43,7 @@
     },
     {
       "type": "TextBlock",
-      "text": "O link voltou após 12 min.",
+      "text": "A porta voltou após 12 min.",
       "wrap": true
     },
     {
