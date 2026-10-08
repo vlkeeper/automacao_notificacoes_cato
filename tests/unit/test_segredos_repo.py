@@ -46,8 +46,11 @@ def _valores_do_env() -> list[str]:
     valores = []
     for linha in env.read_text(encoding="utf-8").splitlines():
         if "=" in linha and not linha.lstrip().startswith("#"):
-            valor = linha.split("=", 1)[1].strip().strip("\"'")
-            if len(valor) >= 8:  # ignora valores triviais (ex.: 60, INFO)
+            chave, valor = (parte.strip() for parte in linha.split("=", 1))
+            valor = valor.strip("\"'")
+            # só chaves sensíveis: TZ, STATE_DIR etc. aparecem legitimamente no .env.example
+            sensivel = any(marca in chave.upper() for marca in ("KEY", "TOKEN", "SECRET", "URL"))
+            if sensivel and len(valor) >= 8:
                 valores.append(valor)
     return valores
 

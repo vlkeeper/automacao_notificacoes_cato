@@ -1,8 +1,6 @@
 # Contrato: Cato GraphQL API (consumido, somente leitura)
 
-> **Status**: *candidato*. É preciso validar com o Cato CLI contra o schema da conta antes de
-> implementar o parser (ver [research.md R-001](../research.md)). Depois da validação, atualize os
-> campos marcados com ⚠ e remova este aviso.
+> **Status**: *verificado* em 2026-10-08 contra a conta real (ver [research.md R-001](../research.md)).
 
 ## Requisição
 
@@ -28,8 +26,7 @@ query MonitorSnapshot($accountID: ID!) {
       info {
         name                      # nome exibido no portal
         isHA
-        # ⚠ confirmar: campo com o papel/nome configurado de cada porta (LAN/WAN)
-        #   ex.: interfaces { id name destType wanRole }
+        interfaces { id destType wanRole }   # papel da porta: CATO=WAN, LAN/VRRP_AND_LAN=LAN
       }
       devices {
         id
@@ -37,7 +34,7 @@ query MonitorSnapshot($accountID: ID!) {
         connected
         socketInfo { id serial isPrimary }
         interfaces {              # túneis WAN para a Cato
-          id                      # ⚠ formato (WAN1, INT_5...)
+          id                      # WAN1, LAN2, "1", PRIMARY1
           name
           connected
           tunnelUptime
@@ -70,10 +67,9 @@ Variáveis: `{"accountID": "<CATO_ACCOUNT_ID>"}`.
 
 - `site.nome = info.name`, e `site.conectado = connectivityStatus == "connected"`.
 - `link_id = f"{socketInfo.id or device.id}/{interface_id}"`.
-- Portas monitoradas são só as que têm papel configurado **WAN** ou **LAN** (⚠ campo de papel).
-- WAN: `online = interfaces[id].connected is True`. Se a validação mostrar que a WAN caída **some**
-  de `interfaces`, a regra passa a ser "presente no inventário com papel WAN e ausente/desconectada
-  em `interfaces`" ⇒ offline.
+- Só sites com `operationalStatus == "active"` são monitorados.
+- WAN = toda interface de `devices[].interfaces` (túnel com a Cato). LAN = porta de `interfacesLinkState` cujo `info.interfaces[].destType` é `LAN`/`VRRP_AND_LAN`/`LAN_AND_HA`/`LAN_LAG_MASTER`. Portas `INTERFACE_DISABLED` são ignoradas.
+- WAN: `online = interfaces[id].connected is True` (a WAN caída permanece na lista com `connected=false`).
 - LAN: `online = interfacesLinkState[id].up is True`.
 - Site desconectado sem `devices`: os links ficam **sem observação** (o estado deles não muda). O
   site, por sua vez, é observado offline.
@@ -85,7 +81,8 @@ Variáveis: `{"accountID": "<CATO_ACCOUNT_ID>"}`.
 | `todos_online.json` | ≥ 2 sites, cada um com ≥ 1 WAN e ≥ 1 LAN online |
 | `link_wan_offline.json` | igual ao anterior, com 1 WAN de um site caída |
 | `site_desconectado.json` | 1 site com `connectivityStatus=disconnected` |
-| `site_ha.json` | site com 2 sockets (primário/secundário) |
+| `site_ha.json` | site com 2 sockets (`haRole` MASTER/BACKUP) |
+| `real_anonimizado.json` | amostra da conta real anonimizada: LAN2 como WAN, HA com socket caído, WAN caída, site desconectado, site desativado, site de nuvem |
 | `graphql_errors.json` | resposta 200 com `errors` |
 
 Anonimização: ids trocados por valores sequenciais estáveis, nomes trocados por `Site A`/`WAN1 -

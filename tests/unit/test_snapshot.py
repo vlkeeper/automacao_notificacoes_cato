@@ -67,3 +67,38 @@ def test_site_conectado_sem_devices_e_omitido():
     resp["data"]["accountSnapshot"]["sites"][1]["devices"] = []
     snap = normalizar(resp)
     assert set(snap.sites) == {"1"}
+
+
+def test_payload_real_anonimizado():
+    """Estrutura real da conta (T007): LAN2 usada como WAN, HA com backup caído, site de nuvem."""
+    snap = normalizar(carregar("real_anonimizado"))
+    # site desativado sem devices não é monitorado
+    assert "5" not in snap.sites
+    # LAN2 com destType CATO é WAN (vem em device.interfaces)
+    lan2 = [l for l in snap.sites["1"].links.values() if l.nome.startswith("LAN2")]
+    assert lan2 and all(l.tipo == "WAN" for l in lan2)
+    # HA: socket caído gera links offline só para ele
+    ha = snap.sites["2"].links
+    assert len({lid.split("/")[0] for lid in ha}) == 2  # um conjunto de links por socket
+    assert any(not l.online for l in ha.values()) and any(l.online for l in ha.values())
+    # WAN caída permanece no payload com connected=false
+    assert any(not l.online and l.tipo == "WAN" for l in snap.sites["3"].links.values())
+    # site desconectado e ativo continua observado
+    assert not snap.sites["4"].conectado
+    # só portas com papel LAN viram link LAN
+    assert all(l.tipo in ("WAN", "LAN") for s in snap.sites.values() for l in s.links.values())
+
+
+def test_site_desativado_nao_e_monitorado():
+    resp = copy.deepcopy(carregar("todos_online"))
+    resp["data"]["accountSnapshot"]["sites"][1]["operationalStatus"] = "disabled"
+    assert set(normalizar(resp).sites) == {"1"}
+
+
+def test_porta_desativada_nao_vira_link_lan():
+    resp = copy.deepcopy(carregar("todos_online"))
+    s = resp["data"]["accountSnapshot"]["sites"][0]
+    for i in s["info"]["interfaces"]:
+        if i["id"] == "LAN1":
+            i["destType"] = "INTERFACE_DISABLED"
+    assert not any(l.tipo == "LAN" for l in normalizar(resp).sites["1"].links.values())

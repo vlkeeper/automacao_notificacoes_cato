@@ -11,6 +11,15 @@ dúvida de requisito.
 
 ## R-001 — Fonte dos dados na Cato (query única) e campos de conectividade
 
+> **VERIFICADO em 2026-10-08** contra a conta real (39 sites; introspecção + `accountSnapshot`):
+> (a) o papel da porta vem de `sites[].info.interfaces[] { id name destType wanRole }`: `destType=CATO`
+> ⇒ WAN (`wanRole` `wan_1..wan_4`); `LAN`, `VRRP_AND_LAN` ⇒ LAN; `INTERFACE_DISABLED` ⇒ ignorada.
+> Uma porta `LAN2` pode ter papel WAN (`destType=CATO`). (b) uma WAN caída **continua** em
+> `devices[].interfaces` com `connected=false`. (c) ids de interface: `WAN1`, `LAN2`, `"1"`/`"6"`
+> (sockets X1700), `PRIMARY1` (sites de nuvem). Outros achados: `interfacesLinkState` vem vazio com o
+> device desconectado; `haRole` usa `MASTER`/`BACKUP` (pode haver dois `MASTER`); sites com
+> `operationalStatus != active` (ex.: `disabled`, sem devices) não são monitorados.
+
 **Decisão**: usar uma única query `accountSnapshot(accountID)` por ciclo, que traz todos os sites
 com seus sockets (`devices`) e as interfaces de cada socket. O mapeamento é este:
 

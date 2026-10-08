@@ -1,0 +1,522 @@
+{
+  "data": {
+    "accountSnapshot": {
+      "id": "1",
+      "timestamp": "2026-10-06T12:00:00Z",
+      "sites": [
+        {
+          "id": "1",
+          "connectivityStatus": "connected",
+          "operationalStatus": "active",
+          "lastConnected": "2026-10-06T10:00:00Z",
+          "info": {
+            "name": "Site A",
+            "isHA": false,
+            "interfaces": [
+              {
+                "id": "WAN1",
+                "name": "DigitalNet",
+                "destType": "CATO",
+                "wanRole": "wan_1"
+              },
+              {
+                "id": "WAN2",
+                "name": "Starlink",
+                "destType": "CATO",
+                "wanRole": "wan_2"
+              },
+              {
+                "id": "LAN2",
+                "name": "Net Max",
+                "destType": "CATO",
+                "wanRole": "wan_3"
+              },
+              {
+                "id": "LAN1",
+                "name": "LAN 01",
+                "destType": "LAN",
+                "wanRole": null
+              }
+            ]
+          },
+          "devices": [
+            {
+              "id": "d1",
+              "haRole": "NONE",
+              "connected": true,
+              "socketInfo": {
+                "id": "s-1",
+                "serial": null,
+                "isPrimary": true
+              },
+              "interfaces": [
+                {
+                  "id": "LAN2",
+                  "name": "LAN2 - Operadora 1",
+                  "connected": true,
+                  "tunnelUptime": 100
+                },
+                {
+                  "id": "WAN1",
+                  "name": "WAN1 - Operadora 2",
+                  "connected": true,
+                  "tunnelUptime": 100
+                },
+                {
+                  "id": "WAN2",
+                  "name": "WAN2 - Operadora 3",
+                  "connected": true,
+                  "tunnelUptime": 100
+                }
+              ],
+              "interfacesLinkState": [
+                {
+                  "id": "LAN1",
+                  "up": true
+                },
+                {
+                  "id": "LAN2",
+                  "up": true
+                },
+                {
+                  "id": "WAN1",
+                  "up": true
+                },
+                {
+                  "id": "WAN2",
+                  "up": true
+                },
+                {
+                  "id": "USB1",
+                  "up": false
+                },
+                {
+                  "id": "USB2",
+                  "up": false
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "2",
+          "connectivityStatus": "connected",
+          "operationalStatus": "active",
+          "lastConnected": "2026-10-06T10:00:00Z",
+          "info": {
+            "name": "Site B",
+            "isHA": true,
+            "interfaces": [
+              {
+                "id": "WAN1",
+                "name": "WAN 01",
+                "destType": "CATO",
+                "wanRole": "wan_1"
+              },
+              {
+                "id": "WAN2",
+                "name": "WAN 02",
+                "destType": "CATO",
+                "wanRole": "wan_2"
+              },
+              {
+                "id": "LAN2",
+                "name": "HA link",
+                "destType": "VRRP",
+                "wanRole": "none"
+              },
+              {
+                "id": "LAN1",
+                "name": "LAN 01",
+                "destType": "LAN",
+                "wanRole": "none"
+              }
+            ]
+          },
+          "devices": [
+            {
+              "id": "d2",
+              "haRole": "MASTER",
+              "connected": true,
+              "socketInfo": {
+                "id": "s-2",
+                "serial": null,
+                "isPrimary": false
+              },
+              "interfaces": [
+                {
+                  "id": "WAN1",
+                  "name": "WAN1 - Operadora 1",
+                  "connected": true,
+                  "tunnelUptime": 100
+                },
+                {
+                  "id": "WAN2",
+                  "name": "WAN2 - Operadora 2",
+                  "connected": false,
+                  "tunnelUptime": 0
+                }
+              ],
+              "interfacesLinkState": [
+                {
+                  "id": "LAN1",
+                  "up": true
+                },
+                {
+                  "id": "LAN2",
+                  "up": false
+                },
+                {
+                  "id": "WAN1",
+                  "up": true
+                },
+                {
+                  "id": "WAN2",
+                  "up": true
+                },
+                {
+                  "id": "USB1",
+                  "up": false
+                },
+                {
+                  "id": "USB2",
+                  "up": false
+                }
+              ]
+            },
+            {
+              "id": "d3",
+              "haRole": "MASTER",
+              "connected": false,
+              "socketInfo": {
+                "id": "s-3",
+                "serial": null,
+                "isPrimary": true
+              },
+              "interfaces": [
+                {
+                  "id": "WAN1",
+                  "name": "WAN1 - Operadora 1",
+                  "connected": false,
+                  "tunnelUptime": 0
+                },
+                {
+                  "id": "WAN2",
+                  "name": "WAN2 - Operadora 2",
+                  "connected": false,
+                  "tunnelUptime": 0
+                }
+              ],
+              "interfacesLinkState": null
+            }
+          ]
+        },
+        {
+          "id": "3",
+          "connectivityStatus": "connected",
+          "operationalStatus": "active",
+          "lastConnected": "2026-10-06T10:00:00Z",
+          "info": {
+            "name": "Site C",
+            "isHA": false,
+            "interfaces": [
+              {
+                "id": "WAN1",
+                "name": "WAN",
+                "destType": "CATO",
+                "wanRole": "wan_1"
+              },
+              {
+                "id": "WAN2",
+                "name": "StarLink-Test",
+                "destType": "CATO",
+                "wanRole": "wan_2"
+              },
+              {
+                "id": "LAN1",
+                "name": "LAN",
+                "destType": "LAN",
+                "wanRole": null
+              }
+            ]
+          },
+          "devices": [
+            {
+              "id": "d4",
+              "haRole": "NONE",
+              "connected": true,
+              "socketInfo": {
+                "id": "s-4",
+                "serial": null,
+                "isPrimary": true
+              },
+              "interfaces": [
+                {
+                  "id": "WAN1",
+                  "name": "WAN1 - Operadora 1",
+                  "connected": true,
+                  "tunnelUptime": 100
+                },
+                {
+                  "id": "WAN2",
+                  "name": "WAN2 - Operadora 2",
+                  "connected": false,
+                  "tunnelUptime": 0
+                }
+              ],
+              "interfacesLinkState": [
+                {
+                  "id": "LAN1",
+                  "up": true
+                },
+                {
+                  "id": "WAN1",
+                  "up": true
+                },
+                {
+                  "id": "WAN2",
+                  "up": false
+                },
+                {
+                  "id": "USB1",
+                  "up": false
+                },
+                {
+                  "id": "USB2",
+                  "up": false
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "4",
+          "connectivityStatus": "disconnected",
+          "operationalStatus": "active",
+          "lastConnected": "2026-10-06T10:00:00Z",
+          "info": {
+            "name": "Site D",
+            "isHA": false,
+            "interfaces": [
+              {
+                "id": "WAN1",
+                "name": "WAN 01",
+                "destType": "CATO",
+                "wanRole": "wan_1"
+              },
+              {
+                "id": "LAN1",
+                "name": "LAN 01",
+                "destType": "LAN",
+                "wanRole": null
+              }
+            ]
+          },
+          "devices": [
+            {
+              "id": "d5",
+              "haRole": "NONE",
+              "connected": false,
+              "socketInfo": {
+                "id": "s-5",
+                "serial": null,
+                "isPrimary": true
+              },
+              "interfaces": [
+                {
+                  "id": "WAN1",
+                  "name": "WAN1 - Operadora 1",
+                  "connected": false,
+                  "tunnelUptime": 0
+                }
+              ],
+              "interfacesLinkState": null
+            }
+          ]
+        },
+        {
+          "id": "5",
+          "connectivityStatus": "disconnected",
+          "operationalStatus": "disabled",
+          "lastConnected": "2026-10-06T10:00:00Z",
+          "info": {
+            "name": "Site E",
+            "isHA": false,
+            "interfaces": [
+              {
+                "id": "LAN1",
+                "name": "LAN 01",
+                "destType": "LAN",
+                "wanRole": null
+              },
+              {
+                "id": "WAN1",
+                "name": "Claro 4G",
+                "destType": "CATO",
+                "wanRole": "wan_3"
+              },
+              {
+                "id": "WAN2",
+                "name": "Link",
+                "destType": "CATO",
+                "wanRole": "wan_2"
+              }
+            ]
+          },
+          "devices": null
+        },
+        {
+          "id": "6",
+          "connectivityStatus": "connected",
+          "operationalStatus": "active",
+          "lastConnected": "2026-10-06T10:00:00Z",
+          "info": {
+            "name": "Site F",
+            "isHA": false,
+            "interfaces": [
+              {
+                "id": "PRIMARY1",
+                "name": "PRIMARY1",
+                "destType": "",
+                "wanRole": "wan_1"
+              }
+            ]
+          },
+          "devices": [
+            {
+              "id": "d6",
+              "haRole": "MASTER",
+              "connected": true,
+              "socketInfo": null,
+              "interfaces": [
+                {
+                  "id": "PRIMARY1",
+                  "name": "PRIMARY1",
+                  "connected": true,
+                  "tunnelUptime": 100
+                }
+              ],
+              "interfacesLinkState": null
+            }
+          ]
+        },
+        {
+          "id": "7",
+          "connectivityStatus": "connected",
+          "operationalStatus": "active",
+          "lastConnected": "2026-10-06T10:00:00Z",
+          "info": {
+            "name": "Site G",
+            "isHA": false,
+            "interfaces": [
+              {
+                "id": "2",
+                "name": "Claro",
+                "destType": "CATO",
+                "wanRole": "wan_3"
+              },
+              {
+                "id": "1",
+                "name": "Starlink",
+                "destType": "CATO",
+                "wanRole": "wan_1"
+              },
+              {
+                "id": "4",
+                "name": "LAN",
+                "destType": "LAN",
+                "wanRole": "none"
+              },
+              {
+                "id": "6",
+                "name": "Vivo",
+                "destType": "CATO",
+                "wanRole": "wan_2"
+              },
+              {
+                "id": "7",
+                "name": "7",
+                "destType": "LAN",
+                "wanRole": "none"
+              }
+            ]
+          },
+          "devices": [
+            {
+              "id": "d7",
+              "haRole": "NONE",
+              "connected": true,
+              "socketInfo": {
+                "id": "s-7",
+                "serial": null,
+                "isPrimary": true
+              },
+              "interfaces": [
+                {
+                  "id": "1",
+                  "name": "1 - Operadora 1",
+                  "connected": true,
+                  "tunnelUptime": 100
+                },
+                {
+                  "id": "2",
+                  "name": "2 - Operadora 2",
+                  "connected": true,
+                  "tunnelUptime": 100
+                },
+                {
+                  "id": "6",
+                  "name": "6 - Operadora 3",
+                  "connected": true,
+                  "tunnelUptime": 100
+                }
+              ],
+              "interfacesLinkState": [
+                {
+                  "id": "1",
+                  "up": true
+                },
+                {
+                  "id": "2",
+                  "up": true
+                },
+                {
+                  "id": "3",
+                  "up": false
+                },
+                {
+                  "id": "4",
+                  "up": true
+                },
+                {
+                  "id": "5",
+                  "up": false
+                },
+                {
+                  "id": "6",
+                  "up": true
+                },
+                {
+                  "id": "7",
+                  "up": true
+                },
+                {
+                  "id": "LTE",
+                  "up": false
+                },
+                {
+                  "id": "USB1",
+                  "up": false
+                },
+                {
+                  "id": "USB2",
+                  "up": false
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

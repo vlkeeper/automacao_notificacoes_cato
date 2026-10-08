@@ -32,7 +32,7 @@ query MonitorSnapshot($accountID: ID!) {
       connectivityStatus
       operationalStatus
       lastConnected
-      info { name isHA }
+      info { name isHA interfaces { id destType wanRole } }
       devices {
         id
         haRole

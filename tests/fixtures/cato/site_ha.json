@@ -11,7 +11,24 @@
           "lastConnected": "2026-10-06T10:00:00Z",
           "info": {
             "name": "Site A",
-            "isHA": false
+            "isHA": false,
+            "interfaces": [
+              {
+                "id": "WAN1",
+                "destType": "CATO",
+                "wanRole": "wan_1"
+              },
+              {
+                "id": "WAN2",
+                "destType": "CATO",
+                "wanRole": "wan_2"
+              },
+              {
+                "id": "LAN1",
+                "destType": "LAN",
+                "wanRole": "none"
+              }
+            ]
           },
           "devices": [
             {
@@ -61,7 +78,19 @@
           "lastConnected": "2026-10-06T10:00:00Z",
           "info": {
             "name": "Site B",
-            "isHA": false
+            "isHA": false,
+            "interfaces": [
+              {
+                "id": "WAN1",
+                "destType": "CATO",
+                "wanRole": "wan_1"
+              },
+              {
+                "id": "LAN1",
+                "destType": "LAN",
+                "wanRole": "none"
+              }
+            ]
           },
           "devices": [
             {
@@ -101,12 +130,24 @@
           "lastConnected": "2026-10-06T10:00:00Z",
           "info": {
             "name": "Site C",
-            "isHA": true
+            "isHA": true,
+            "interfaces": [
+              {
+                "id": "WAN1",
+                "destType": "CATO",
+                "wanRole": "wan_1"
+              },
+              {
+                "id": "LAN1",
+                "destType": "LAN",
+                "wanRole": "none"
+              }
+            ]
           },
           "devices": [
             {
               "id": "d3",
-              "haRole": null,
+              "haRole": "MASTER",
               "connected": true,
               "socketInfo": {
                 "id": "s-3a",
@@ -134,7 +175,7 @@
             },
             {
               "id": "d4",
-              "haRole": null,
+              "haRole": "BACKUP",
               "connected": true,
               "socketInfo": {
                 "id": "s-3b",

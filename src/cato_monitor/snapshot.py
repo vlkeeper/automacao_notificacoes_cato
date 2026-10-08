@@ -1,9 +1,11 @@
 """Normaliza a resposta GraphQL da Cato num `Snapshot`.
 
-ÚNICO ponto que conhece o schema da Cato. ATENÇÃO (tasks T007, R-001): o papel LAN/WAN das
-portas e o comportamento de uma WAN caída ainda NÃO foram verificados contra a conta real. As
-regras marcadas com ⚠ abaixo seguem o contrato "candidato" e devem ser revistas com os payloads
-reais, sem tocar na máquina de estados.
+ÚNICO ponto que conhece o schema da Cato. Regras verificadas contra a conta real (T007, R-001):
+- o papel das portas vem de `site.info.interfaces[].destType` (`CATO` = WAN; `LAN`/`VRRP_AND_LAN`
+  = LAN; `INTERFACE_DISABLED` = ignorada);
+- uma WAN caída continua em `device.interfaces` com `connected=false` (não some);
+- `interfacesLinkState` vem vazio quando o device está desconectado;
+- só sites com `operationalStatus == "active"` são monitorados (os demais estão desativados).
 """
 
 from __future__ import annotations
@@ -14,6 +16,8 @@ from .modelos import ConsultaFalhou, ObservacaoLink, ObservacaoSite, Snapshot
 
 STATUS_CONECTADO = "connected"
 STATUS_DESCONECTADO = "disconnected"
+STATUS_OPERACIONAL_ATIVO = "active"
+DEST_TYPES_LAN = frozenset({"LAN", "VRRP_AND_LAN", "LAN_AND_HA", "LAN_LAG_MASTER"})
 
 
 class _SchemaInvalido(Exception):
@@ -22,14 +26,15 @@ class _SchemaInvalido(Exception):
 
 def _rotulo_socket(device: dict[str, Any]) -> str:
     info = device.get("socketInfo") or {}
-    if info.get("isPrimary") is True or device.get("haRole") == "PRIMARY":
+    papel = str(device.get("haRole") or "").upper()
+    if papel in ("MASTER", "PRIMARY"):
         return "primário"
-    if info.get("isPrimary") is False or device.get("haRole") == "SECONDARY":
+    if papel in ("BACKUP", "SECONDARY"):
         return "secundário"
     return ""
 
 
-def _links_do_device(device: dict[str, Any]) -> dict[str, ObservacaoLink]:
+def _links_do_device(device: dict[str, Any], ids_lan: frozenset[str]) -> dict[str, ObservacaoLink]:
     info = device.get("socketInfo") or {}
     chave_socket = info.get("id") or device.get("id")
     if not chave_socket:
@@ -37,7 +42,7 @@ def _links_do_device(device: dict[str, Any]) -> dict[str, ObservacaoLink]:
     socket = _rotulo_socket(device)
     links: dict[str, ObservacaoLink] = {}
 
-    # WAN: túnel da porta com a Cato. ⚠ papel e "WAN caída some?" a confirmar (R-001).
+    # WAN: túnel da porta com a Cato; WAN caída permanece na lista com connected=false.
     ids_wan = set()
     for iface in device.get("interfaces") or []:
         iid = iface.get("id")
@@ -49,10 +54,10 @@ def _links_do_device(device: dict[str, Any]) -> dict[str, ObservacaoLink]:
             online=iface.get("connected") is True,
         )
 
-    # LAN: link físico. ⚠ papel LAN inferido pelo prefixo do id até a verificação (R-001).
+    # LAN: link físico das portas com papel LAN (destType em info.interfaces).
     for porta in device.get("interfacesLinkState") or []:
         iid = porta.get("id")
-        if not iid or iid in ids_wan or not str(iid).upper().startswith("LAN"):
+        if not iid or iid in ids_wan or iid not in ids_lan:
             continue
         links[f"{chave_socket}/{iid}"] = ObservacaoLink(
             nome=str(iid), tipo="LAN", socket=socket, online=porta.get("up") is True,
@@ -83,8 +88,15 @@ def normalizar(resposta: Any, permitir_vazio: bool = True) -> Snapshot | Consult
         if status not in (STATUS_CONECTADO, STATUS_DESCONECTADO):
             return ConsultaFalhou("schema_invalido")
         conectado = status == STATUS_CONECTADO
-        nome = ((s.get("info") or {}).get("name"))
+        info = s.get("info") or {}
+        nome = info.get("name")
         devices = s.get("devices")
+        if s.get("operationalStatus") != STATUS_OPERACIONAL_ATIVO:
+            continue  # site desativado/em implantação: não monitorado
+        ids_lan = frozenset(
+            i["id"] for i in (info.get("interfaces") or [])
+            if isinstance(i, dict) and i.get("id") and i.get("destType") in DEST_TYPES_LAN
+        )
 
         if not nome:
             continue  # sem nome: observação inválida, estado inalterado
@@ -93,6 +105,6 @@ def normalizar(resposta: Any, permitir_vazio: bool = True) -> Snapshot | Consult
 
         links: dict[str, ObservacaoLink] = {}
         for device in devices or []:  # site desconectado sem devices: links sem observação
-            links.update(_links_do_device(device))
+            links.update(_links_do_device(device, ids_lan))
         sites[str(s["id"])] = ObservacaoSite(nome=nome, conectado=conectado, links=links)
     return Snapshot(sites=sites)
