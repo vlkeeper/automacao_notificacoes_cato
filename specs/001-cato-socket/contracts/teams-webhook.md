@@ -65,3 +65,5 @@ Regras:
 - Cada card precisa ter no máximo 24 KB serializado. O lembrete é dividido em partes se passar
   disso.
 - Cada tipo de evento tem um *snapshot test* do JSON do card.
+
+> **Feature 003**: o destino passa a depender do tipo do aviso (dois canais); veja `specs/003-canal-operacional-teams/contracts/teams-canais.md`.

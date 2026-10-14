@@ -6,7 +6,7 @@
   "required": ["schema_version", "atualizado_em", "monitor", "sites", "pendente_envio"],
   "additionalProperties": false,
   "properties": {
-    "schema_version": { "const": 1 },
+    "schema_version": { "const": 1, "description": "Versão 1. A v2 (filas por canal) está em specs/003-canal-operacional-teams/contracts/state-file-v2.md" },
     "atualizado_em": { "$ref": "#/$defs/ts" },
     "monitor": {
       "type": "object",
