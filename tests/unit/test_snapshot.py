@@ -40,6 +40,32 @@ def test_ha_chave_do_link_por_socket():
     assert links["s-3a/WAN1"].socket == "primário" and links["s-3b/WAN1"].socket == "secundário"
 
 
+def test_ha_rotulo_vem_de_is_primary_e_nao_de_ha_role():
+    """Conta real: os dois sockets do par HA vêm com haRole=MASTER; só isPrimary os diferencia."""
+    resp = carregar("site_ha")
+    for d in resp["data"]["accountSnapshot"]["sites"]:
+        for dev in d.get("devices") or []:
+            if dev["socketInfo"]["id"] in ("s-3a", "s-3b"):
+                dev["haRole"] = "MASTER"
+    links = normalizar(resp).sites["3"].links
+    assert links["s-3a/WAN1"].socket == "primário" and links["s-3b/WAN1"].socket == "secundário"
+
+
+def test_porta_ha_link_vrrp_e_monitorada_nos_dois_sockets_com_nome_da_api():
+    resp = carregar("site_ha")
+    site = next(x for x in resp["data"]["accountSnapshot"]["sites"] if x["id"] == "3")
+    site["info"]["interfaces"].append(
+        {"id": "LAN2", "name": "HA link", "destType": "VRRP", "wanRole": "NONE"}
+    )
+    for dev in site["devices"]:
+        dev["interfacesLinkState"].append({"id": "LAN2", "up": dev["socketInfo"]["isPrimary"]})
+    links = normalizar(resp).sites["3"].links
+    assert links["s-3a/LAN2"].nome == "HA link" and links["s-3a/LAN2"].tipo == "LAN"
+    assert links["s-3a/LAN2"].online and links["s-3a/LAN2"].socket == "primário"
+    assert links["s-3b/LAN2"].nome == "HA link" and not links["s-3b/LAN2"].online
+    assert links["s-3b/LAN2"].socket == "secundário"
+
+
 def test_lista_de_sites_vazia_e_invalida_quando_o_estado_tem_sites():
     resp = {"data": {"accountSnapshot": {"sites": []}}}
     assert normalizar(resp, permitir_vazio=False) == ConsultaFalhou("schema_invalido")

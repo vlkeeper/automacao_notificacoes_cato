@@ -17,15 +17,22 @@ from .modelos import ConsultaFalhou, ObservacaoLink, ObservacaoSite, Snapshot
 STATUS_CONECTADO = "connected"
 STATUS_DESCONECTADO = "disconnected"
 STATUS_OPERACIONAL_ATIVO = "active"
-DEST_TYPES_LAN = frozenset({"LAN", "VRRP_AND_LAN", "LAN_AND_HA", "LAN_LAG_MASTER"})
+# VRRP = porta "HA link" entre os dois sockets de um par HA (monitorada como link LAN).
+DEST_TYPES_LAN = frozenset({"LAN", "VRRP_AND_LAN", "LAN_AND_HA", "LAN_LAG_MASTER", "VRRP"})
 
 
 class _SchemaInvalido(Exception):
     pass
 
 
-def _rotulo_socket(device: dict[str, Any]) -> str:
+def _rotulo_socket(device: dict[str, Any], site_ha: bool) -> str:
+    """Primário/secundário do socket. Em HA a fonte de verdade é `socketInfo.isPrimary`.
+
+    `haRole` NÃO serve para isso: na conta real os dois sockets de um par HA vêm com `MASTER`.
+    """
     info = device.get("socketInfo") or {}
+    if site_ha and isinstance(info.get("isPrimary"), bool):
+        return "primário" if info["isPrimary"] else "secundário"
     papel = str(device.get("haRole") or "").upper()
     if papel in ("MASTER", "PRIMARY"):
         return "primário"
@@ -34,12 +41,14 @@ def _rotulo_socket(device: dict[str, Any]) -> str:
     return ""
 
 
-def _links_do_device(device: dict[str, Any], ids_lan: frozenset[str]) -> dict[str, ObservacaoLink]:
+def _links_do_device(
+    device: dict[str, Any], ids_lan: Any, site_ha: bool = False
+) -> dict[str, ObservacaoLink]:
     info = device.get("socketInfo") or {}
     chave_socket = info.get("id") or device.get("id")
     if not chave_socket:
         return {}
-    socket = _rotulo_socket(device)
+    socket = _rotulo_socket(device, site_ha)
     links: dict[str, ObservacaoLink] = {}
 
     # WAN: túnel da porta com a Cato; WAN caída permanece na lista com connected=false.
@@ -60,7 +69,7 @@ def _links_do_device(device: dict[str, Any], ids_lan: frozenset[str]) -> dict[st
         if not iid or iid in ids_wan or iid not in ids_lan:
             continue
         links[f"{chave_socket}/{iid}"] = ObservacaoLink(
-            nome=str(iid), tipo="LAN", socket=socket, online=porta.get("up") is True,
+            nome=ids_lan.get(iid) or str(iid), tipo="LAN", socket=socket, online=porta.get("up") is True,
         )
     return links
 
@@ -93,10 +102,12 @@ def normalizar(resposta: Any, permitir_vazio: bool = True) -> Snapshot | Consult
         devices = s.get("devices")
         if s.get("operationalStatus") != STATUS_OPERACIONAL_ATIVO:
             continue  # site desativado/em implantação: não monitorado
-        ids_lan = frozenset(
-            i["id"] for i in (info.get("interfaces") or [])
+        # id da porta LAN -> nome como vem da API (ex.: "LAN 01", "HA link")
+        ids_lan = {
+            i["id"]: i.get("name")
+            for i in (info.get("interfaces") or [])
             if isinstance(i, dict) and i.get("id") and i.get("destType") in DEST_TYPES_LAN
-        )
+        }
 
         if not nome:
             continue  # sem nome: observação inválida, estado inalterado
@@ -105,6 +116,6 @@ def normalizar(resposta: Any, permitir_vazio: bool = True) -> Snapshot | Consult
 
         links: dict[str, ObservacaoLink] = {}
         for device in devices or []:  # site desconectado sem devices: links sem observação
-            links.update(_links_do_device(device, ids_lan))
+            links.update(_links_do_device(device, ids_lan, site_ha=len(devices or []) > 1))
         sites[str(s["id"])] = ObservacaoSite(nome=nome, conectado=conectado, links=links)
     return Snapshot(sites=sites)
