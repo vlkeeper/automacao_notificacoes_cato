@@ -135,7 +135,8 @@ def avaliar_ciclo_detalhado(
                 itens_offline.append({"site_nome": site.nome, "link_nome": None, "tipo": "SITE"})
             for link in site.links.values():
                 if link.estado == EstadoItem.OFFLINE_NOTIFICADO:
-                    itens_offline.append({"site_nome": site.nome, "link_nome": link.nome, "tipo": link.tipo})
+                    itens_offline.append({"site_nome": site.nome, "link_nome": link.nome, "tipo": link.tipo,
+                                          "socket": link.socket})
         emitir(
             TipoEvento.MONITOR_INICIADO,
             sites_total=len(est.sites), links_total=links_total, itens_offline=itens_offline,
@@ -208,7 +209,7 @@ def _pendencias(est: EstadoMonitor) -> list[dict[str, Any]]:
             link = site.links[lid]
             if link.estado == EstadoItem.OFFLINE_NOTIFICADO and not link.coberto_pelo_site:
                 itens.append({"site_nome": site.nome, "link_nome": link.nome, "tipo": link.tipo,
-                              "inicio_queda": ts_para_str(link.inicio_queda)})
+                              "socket": link.socket, "inicio_queda": ts_para_str(link.inicio_queda)})
     return itens
 
 
@@ -327,13 +328,13 @@ def _avaliar_site(sid, site: Site, obs: ObservacaoSite, agora, tol, emitir, det:
                 outros = sum(1 for k, o in obs.links.items() if k != lid and o.online)
                 emitir(
                     TipoEvento.LINK_OFFLINE, site_id=sid, site_nome=site.nome, link_id=lid,
-                    link_nome=novo_link.nome, link_tipo=novo_link.tipo,
+                    link_nome=novo_link.nome, link_tipo=novo_link.tipo, socket=novo_link.socket,
                     inicio_queda=ts_para_str(novo_link.inicio_queda), outros_links_online=outros,
                 )
             else:
                 emitir(
                     TipoEvento.LINK_RETORNO, site_id=sid, site_nome=site.nome, link_id=lid,
-                    link_nome=novo_link.nome, link_tipo=novo_link.tipo,
+                    link_nome=novo_link.nome, link_tipo=novo_link.tipo, socket=novo_link.socket,
                     inicio_queda=ts_para_str(agora - acao.duracao), retorno_em=ts_para_str(agora),
                 )
 

@@ -4,6 +4,7 @@ import requests
 import responses
 
 from cato_monitor import teams
+from cato_monitor.canais import Canal
 from cato_monitor.modelos import EstadoMonitor, EventoNotificacao, TipoEvento
 
 from ..conftest import T0, URL_TEAMS
@@ -16,14 +17,14 @@ def evento(n, tipo=TipoEvento.MONITOR_RECUPERADO):
 
 def estado_com(n):
     est = EstadoMonitor()
-    est.pendente_envio = [evento(i) for i in range(1, n + 1)]
+    est.filas["rede"] = [evento(i) for i in range(1, n + 1)]
     return est
 
 
 def drenar(est, cfg, esperas=None):
     salvos = []
-    n = teams.drenar(est, cfg, lambda: salvos.append(len(est.pendente_envio)),
-                     dormir=(esperas.append if esperas is not None else lambda s: None))
+    n, _ = teams.drenar_canal(est, Canal.REDE, cfg, lambda: salvos.append(len(est.filas["rede"])),
+                              dormir=(esperas.append if esperas is not None else lambda s: None))
     return n, salvos
 
 
@@ -32,7 +33,7 @@ def test_202_remove_da_fila_e_salva(cfg):
     responses.post(URL_TEAMS, status=202)
     est = estado_com(2)
     n, salvos = drenar(est, cfg)
-    assert n == 2 and est.pendente_envio == [] and salvos == [1, 0]
+    assert n == 2 and est.filas["rede"] == [] and salvos == [1, 0]
     corpo = json.loads(responses.calls[0].request.body)
     assert corpo["type"] == "message"
     anexo = corpo["attachments"][0]
@@ -45,9 +46,9 @@ def test_falha_mantem_evento_incrementa_tentativas_e_interrompe(cfg):
     responses.post(URL_TEAMS, status=400)
     est = estado_com(3)
     n, _ = drenar(est, cfg)
-    assert n == 0 and len(est.pendente_envio) == 3
-    assert est.pendente_envio[0].tentativas == 1 and est.pendente_envio[0].ultimo_erro == "http_400"
-    assert est.pendente_envio[1].tentativas == 0  # head-of-line: nem tentou o segundo
+    assert n == 0 and len(est.filas["rede"]) == 3
+    assert est.filas["rede"][0].tentativas == 1 and est.filas["rede"][0].ultimo_erro == "http_400"
+    assert est.filas["rede"][1].tentativas == 0  # head-of-line: nem tentou o segundo
     assert len(responses.calls) == 1
 
 
@@ -79,7 +80,7 @@ def test_5xx_persistente_tenta_no_maximo_duas_vezes(cfg):
     responses.post(URL_TEAMS, status=503)
     est = estado_com(1)
     drenar(est, cfg)
-    assert len(responses.calls) == 2 and est.pendente_envio[0].ultimo_erro == "http_503"
+    assert len(responses.calls) == 2 and est.filas["rede"][0].ultimo_erro == "http_503"
 
 
 @responses.activate
@@ -88,7 +89,7 @@ def test_url_ausente_do_ultimo_erro_e_dos_logs(cfg, caplog):
     est = estado_com(1)
     with caplog.at_level("DEBUG"):
         drenar(est, cfg)
-    assert est.pendente_envio[0].ultimo_erro == "conexao"
+    assert est.filas["rede"][0].ultimo_erro == "conexao"
     assert URL_TEAMS not in json.dumps(est.para_dict())
     assert "SEGREDO-TEAMS" not in caplog.text
 
@@ -98,7 +99,7 @@ def test_timeout(cfg):
     responses.post(URL_TEAMS, body=requests.Timeout())
     est = estado_com(1)
     drenar(est, cfg)
-    assert est.pendente_envio[0].ultimo_erro == "timeout"
+    assert est.filas["rede"][0].ultimo_erro == "timeout"
 
 
 @responses.activate
@@ -107,7 +108,7 @@ def test_limite_de_20_envios_por_ciclo(cfg):
     est = estado_com(25)
     esperas = []
     n, _ = drenar(est, cfg, esperas)
-    assert n == 20 and len(est.pendente_envio) == 5
+    assert n == 20 and len(est.filas["rede"]) == 5
     assert len(esperas) == 19  # 1 s entre envios
     n, _ = drenar(est, cfg)
-    assert n == 5 and est.pendente_envio == []
+    assert n == 5 and est.filas["rede"] == []

@@ -33,3 +33,5 @@ Códigos de saída do processo:
 |---|---|
 | 0 | parada solicitada (SIGTERM/SIGINT), com estado gravado |
 | 1 | configuração inválida, outra instância com o lock ou `schema_version` do estado mais novo que o suportado |
+
+> **Feature 003**: acrescenta `TEAMS_WEBHOOK_OPERACIONAL_URL`; veja `specs/003-canal-operacional-teams/contracts/configuracao.md`.

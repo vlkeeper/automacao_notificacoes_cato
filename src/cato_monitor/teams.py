@@ -1,13 +1,15 @@
-"""Entrega dos cards ao Teams (Workflows): fila global ordenada, para na primeira falha."""
+"""Entrega dos cards ao Teams (Workflows): uma fila por canal, ordenada, para na primeira falha."""
 
 from __future__ import annotations
 
 import logging
+import threading
 import time
 from typing import Callable
 
 import requests
 
+from .canais import Canal
 from .cards import renderizar
 from .config import Config
 from .logs import evento
@@ -39,12 +41,12 @@ def _retry_after(resp: requests.Response) -> float | None:
         return None
 
 
-def _enviar(sessao: requests.Session, cfg: Config, corpo: dict, dormir) -> tuple[bool, str]:
+def _enviar(sessao: requests.Session, url: str, corpo: dict, dormir) -> tuple[bool, str]:
     """Faz o POST (com até 2 tentativas em 429/5xx). Devolve (entregue, status_sanitizado)."""
     status = "conexao"
     for tentativa in range(1, MAX_TENTATIVAS_HTTP + 1):
         try:
-            resp = sessao.post(cfg.teams_webhook_url, json=corpo, timeout=TIMEOUT)
+            resp = sessao.post(url, json=corpo, timeout=TIMEOUT)
         except requests.Timeout:
             return False, "timeout"
         except requests.RequestException:
@@ -60,33 +62,71 @@ def _enviar(sessao: requests.Session, cfg: Config, corpo: dict, dormir) -> tuple
     return False, status
 
 
-def drenar(
+def url_do_canal(cfg: Config, canal: Canal) -> str:
+    return cfg.teams_webhook_url if canal is Canal.REDE else cfg.teams_webhook_operacional_url
+
+
+def drenar_canal(
     estado: EstadoMonitor,
+    canal: Canal,
     cfg: Config,
     salvar: Callable[[], None],
     sessao: requests.Session | None = None,
     dormir: Callable[[float], None] = time.sleep,
-) -> int:
-    """Envia a fila em ordem. Devolve quantos eventos foram entregues neste ciclo."""
+) -> tuple[int, bool]:
+    """Envia a fila do canal em ordem. Devolve (entregues neste ciclo, falhou)."""
     sessao = sessao or requests.Session()
+    fila = estado.filas[canal.value]
+    url = url_do_canal(cfg, canal)
     enviados = 0
-    while estado.pendente_envio and enviados < MAX_ENVIOS_POR_CICLO:
-        ev = estado.pendente_envio[0]
+    while fila and enviados < MAX_ENVIOS_POR_CICLO:
+        ev = fila[0]
         corpo = _mensagem(renderizar(ev, cfg.tz))
-        entregue, status = _enviar(sessao, cfg, corpo, dormir)
+        entregue, status = _enviar(sessao, url, corpo, dormir)
         if entregue:
-            estado.pendente_envio.pop(0)
+            fila.pop(0)
             salvar()
             enviados += 1
-            evento(log, logging.INFO, "envio_teams", id=ev.id, tipo=ev.tipo.value, status=status,
-                   tentativas=ev.tentativas + 1)
-            if estado.pendente_envio and enviados < MAX_ENVIOS_POR_CICLO:
+            evento(log, logging.INFO, "envio_teams", canal=canal.value, id=ev.id, tipo=ev.tipo.value,
+                   status=status, tentativas=ev.tentativas + 1)
+            if fila and enviados < MAX_ENVIOS_POR_CICLO:
                 dormir(ESPACO_ENTRE_ENVIOS)
         else:
             ev.tentativas += 1
             ev.ultimo_erro = status  # sanitizado: status/tipo de erro, nunca a URL
             salvar()
-            evento(log, logging.WARNING, "envio_teams", id=ev.id, tipo=ev.tipo.value, status=status,
-                   tentativas=ev.tentativas)
-            break  # head-of-line: preserva a ordem
-    return enviados
+            evento(log, logging.WARNING, "envio_teams", canal=canal.value, id=ev.id, tipo=ev.tipo.value,
+                   status=status, tentativas=ev.tentativas)
+            return enviados, True  # head-of-line: preserva a ordem
+    return enviados, False
+
+
+def drenar_todos(
+    estado: EstadoMonitor,
+    cfg: Config,
+    salvar: Callable[[], None],
+    sessao: requests.Session | None = None,
+    dormir: Callable[[float], None] = time.sleep,
+) -> dict[Canal, tuple[int, bool]]:
+    """Drena os dois canais em paralelo (uma thread por canal): um não atrasa o outro."""
+    trava = threading.Lock()
+    resultados: dict[Canal, tuple[int, bool]] = {}
+
+    def salvar_seguro() -> None:
+        with trava:
+            salvar()
+
+    def trabalho(canal: Canal) -> None:
+        try:
+            resultados[canal] = drenar_canal(estado, canal, cfg, salvar_seguro, sessao, dormir)
+        except Exception:  # um canal com defeito não pode derrubar o outro
+            log.exception("drenagem falhou",
+                          extra={"event": "envio_teams_erro", "canal": canal.value})
+            resultados[canal] = (0, True)
+
+    threads = [threading.Thread(target=trabalho, args=(c,), name=f"teams-{c.value}") for c in Canal]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    return resultados

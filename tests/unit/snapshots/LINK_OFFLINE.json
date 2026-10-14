@@ -39,7 +39,7 @@
     },
     {
       "type": "TextBlock",
-      "text": "Uma das redes do site **Filial Campinas** caiu. O site continua funcionando pelas demais portas (operação parcial).",
+      "text": "Uma das redes do site **Filial Campinas** caiu. O site continua funcionando pelas demais redes (operação parcial).",
       "wrap": true
     },
     {

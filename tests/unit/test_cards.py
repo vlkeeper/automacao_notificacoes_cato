@@ -41,10 +41,15 @@ DADOS = {
     TipoEvento.MONITOR_FALHA: dict(falhas_consecutivas=5, desde="2026-10-06T14:20:00+00:00", ultimo_motivo="http_503"),
     TipoEvento.MONITOR_RECUPERADO: dict(desde="2026-10-06T14:20:00+00:00",
                                         recuperado_em="2026-10-06T14:25:00+00:00", falhas_total=6),
+    TipoEvento.CANAL_SEM_ENTREGA: dict(canal_afetado="operacional", desde="2026-10-06T14:00:00+00:00", pendentes=3),
+    TipoEvento.CANAL_NORMALIZADO: dict(canal_afetado="rede", desde="2026-10-06T14:00:00+00:00", duracao_s=1500),
     TipoEvento.MONITOR_INICIADO: dict(sites_total=12, links_total=31, itens_offline=[
         {"site_nome": "Filial Campinas", "link_nome": "WAN2 - Operadora B", "tipo": "WAN"},
         {"site_nome": "Filial Recife", "link_nome": None, "tipo": "SITE"}]),
 }
+
+
+_ROTULO = {"rede": "DE REDE", "operacional": "OPERACIONAL"}
 
 
 def evento(tipo, **dados):
@@ -89,12 +94,15 @@ def test_ha_um_estilo_para_cada_tipo_e_sao_distintos():
 
 @pytest.mark.parametrize("tipo", list(TipoEvento))
 def test_envelope_padrao(tipo):
-    card = renderizar(evento(tipo), TZ)
+    evento_ = evento(tipo)
+    card = renderizar(evento_, TZ)
     emoji, titulo, style = ESTILOS[tipo]
     assert card["type"] == "AdaptiveCard" and card["version"] == "1.4"
     assert card["msteams"] == {"width": "Full"}
     cab = card["body"][0]
     assert cab["type"] == "Container" and cab["style"] == style
+    if "{}" in titulo:
+        titulo = titulo.format(_ROTULO[evento_.dados["canal_afetado"]])
     assert cab["items"][0]["text"] == f"{emoji} {titulo}"
     assert card["body"][-1]["text"] == "Ref. evt-000123"
 
@@ -110,21 +118,20 @@ def test_sem_mencoes_e_dentro_do_limite(tipo):
 def test_campos_obrigatorios_de_queda_de_link():
     t = "\n".join(textos(renderizar(evento(TipoEvento.LINK_OFFLINE), TZ)))
     assert "Site: Filial Campinas" in t
-    assert "Link: WAN2 - Operadora B (WAN)" in t
+    assert "Porta: WAN2 - Operadora B (WAN)" in t
     assert "Desde: 06/10/2026 10:00" in t
-    assert "Há quanto tempo: 1 h 25 min" in t
     assert "operação parcial" in t
 
 
 def test_campos_obrigatorios_de_site_offline():
     t = "\n".join(textos(renderizar(evento(TipoEvento.SITE_OFFLINE), TZ)))
-    assert "Site: Filial Campinas" in t and "Há quanto tempo: 1 h 25 min" in t
-    assert "Todos os links estão fora" in t
+    assert "Site: Filial Campinas" in t and "Desde: 06/10/2026 10:00" in t
+    assert "Todas as redes estão fora" in t
 
 
 def test_retorno_usa_duracao():
     t = "\n".join(textos(renderizar(evento(TipoEvento.LINK_RETORNO), TZ)))
-    assert "Duração: 12 min" in t and "O link voltou após 12 min." in t
+    assert "Duração: 12 min" in t and "A rede voltou após 12 min." in t
     t = "\n".join(textos(renderizar(evento(TipoEvento.SITE_RETORNO), TZ)))
     assert "Duração: 1 h 25 min" in t and "Ainda fora: WAN2 - Operadora B (WAN)" in t
 

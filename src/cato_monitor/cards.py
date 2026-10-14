@@ -24,7 +24,11 @@ ESTILOS: dict[TipoEvento, tuple[str, str, str]] = {
     TipoEvento.MONITOR_FALHA: ("⚙️", "MONITOR: SEM ACESSO À CATO", "emphasis"),
     TipoEvento.MONITOR_RECUPERADO: ("⚙️", "MONITOR: ACESSO NORMALIZADO", "emphasis"),
     TipoEvento.MONITOR_INICIADO: ("⚙️", "MONITOR INICIADO", "emphasis"),
+    # O rótulo do canal afetado é inserido no título em _envelope.
+    TipoEvento.CANAL_SEM_ENTREGA: ("⚙️", "CANAL {} SEM ENTREGA", "emphasis"),
+    TipoEvento.CANAL_NORMALIZADO: ("⚙️", "CANAL {} NORMALIZADO", "emphasis"),
 }
+_ROTULO_CANAL = {"rede": "DE REDE", "operacional": "OPERACIONAL"}
 
 
 # --------------------------------------------------------------------------- helpers
@@ -49,8 +53,10 @@ def _ts(valor: str) -> datetime:
     return str_para_ts(valor)
 
 
-def _link_txt(nome: str, tipo: str) -> str:
-    return f"{nome} ({tipo})"
+def _link_txt(nome: str, tipo: str, socket: str = "") -> str:
+    """Nome da porta; o socket (primário/secundário) desambigua portas de mesmo nome em sites com HA."""
+    base = f"{nome} ({tipo})"
+    return f"{base} - socket {socket}" if socket else base
 
 
 def _fatos(*pares: tuple[str, str]) -> dict[str, Any]:
@@ -63,6 +69,8 @@ def _texto(texto: str, **extra: Any) -> dict[str, Any]:
 
 def _envelope(evento: EventoNotificacao, corpo: list[dict[str, Any]]) -> dict[str, Any]:
     emoji, titulo, style = ESTILOS[evento.tipo]
+    if "{}" in titulo:
+        titulo = titulo.format(_ROTULO_CANAL[evento.dados["canal_afetado"]])
     cabecalho = {
         "type": "Container",
         "style": style,
@@ -88,7 +96,7 @@ def _link_offline(e: EventoNotificacao, tz: tzinfo) -> list[dict[str, Any]]:
     return [
         _fatos(
             ("Site", d["site_nome"]),
-            ("Porta", _link_txt(d["link_nome"], d["link_tipo"])),
+            ("Porta", _link_txt(d["link_nome"], d["link_tipo"], d.get("socket", ""))),
             ("Desde", formatar_horario(inicio, tz)),
             ),
         _texto(
@@ -121,11 +129,11 @@ def _link_retorno(e: EventoNotificacao, tz: tzinfo) -> list[dict[str, Any]]:
     return [
         _fatos(
             ("Site", d["site_nome"]),
-            ("Porta", _link_txt(d["link_nome"], d["link_tipo"])),
+            ("Porta", _link_txt(d["link_nome"], d["link_tipo"], d.get("socket", ""))),
             ("Desde", formatar_horario(inicio, tz)),
             ("Duração", duracao),
         ),
-        _texto(f"A porta voltou após {duracao}."),
+        _texto(f"A rede voltou após {duracao}."),
     ]
 
 
@@ -171,7 +179,7 @@ def _lembrete(e: EventoNotificacao, tz: tzinfo) -> list[dict[str, Any]]:
     linhas = []
     for p in pendencias:
         inicio = _ts(p["inicio_queda"])
-        porta = _link_txt(p["link_nome"], p["tipo"]) if p["link_nome"] else "Site inteiro"
+        porta = _link_txt(p["link_nome"], p["tipo"], p.get("socket", "")) if p["link_nome"] else "Site inteiro"
         linhas.append((p["site_nome"], porta, formatar_horario(inicio, tz),
                        formatar_duracao((e.ocorrido_em - inicio).total_seconds())))
     corpo += _tabela(("Site", "Porta", "Desde", "Há quanto tempo"), linhas, ("4", "4", "3", "3"))
@@ -219,14 +227,41 @@ def _monitor_iniciado(e: EventoNotificacao, tz: tzinfo) -> list[dict[str, Any]]:
         portas_por_site: dict[str, list[str]] = {}
         for i in d["itens_offline"]:
             portas = portas_por_site.setdefault(i["site_nome"], [])
-            portas.append(_link_txt(i["link_nome"], i["tipo"]) if i["link_nome"] else "Site inteiro (todos os links)")
+            portas.append(_link_txt(i["link_nome"], i["tipo"], i.get("socket", "")) if i["link_nome"] else "Site inteiro (todos os links)")
         corpo.append(_texto("Já estavam fora no início:", weight="Bolder"))
         corpo += _tabela(("Site", "Portas offline"),
                          [(site, SEP.join(portas)) for site, portas in portas_por_site.items()], ("1", "1"))
     return corpo
 
 
+def _canal_sem_entrega(e: EventoNotificacao, tz: tzinfo) -> list[dict[str, Any]]:
+    d = e.dados
+    return [
+        _fatos(
+            ("Sem entrega desde", formatar_horario(_ts(d["desde"]), tz)),
+            ("Avisos pendentes", str(d["pendentes"])),
+        ),
+        _texto(
+            "O monitor não consegue entregar avisos neste canal há mais de 15 minutos. "
+            "Os avisos pendentes serão enviados, na ordem, assim que o canal voltar."
+        ),
+    ]
+
+
+def _canal_normalizado(e: EventoNotificacao, tz: tzinfo) -> list[dict[str, Any]]:
+    d = e.dados
+    return [
+        _fatos(
+            ("Sem entrega desde", formatar_horario(_ts(d["desde"]), tz)),
+            ("Duração da falha", formatar_duracao(d["duracao_s"])),
+        ),
+        _texto("A entrega de avisos neste canal voltou a funcionar."),
+    ]
+
+
 _TEMPLATES = {
+    TipoEvento.CANAL_SEM_ENTREGA: _canal_sem_entrega,
+    TipoEvento.CANAL_NORMALIZADO: _canal_normalizado,
     TipoEvento.LINK_OFFLINE: _link_offline,
     TipoEvento.SITE_OFFLINE: _site_offline,
     TipoEvento.LINK_RETORNO: _link_retorno,

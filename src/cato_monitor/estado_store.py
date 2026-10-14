@@ -5,14 +5,20 @@ from __future__ import annotations
 import json
 import logging
 import os
+import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import IO
 
+from .canais import canal_do_evento
 from .logs import evento
 from .modelos import (
     SCHEMA_VERSION,
     EstadoMonitor,
+    EventoNotificacao,
+    Site,
+    SituacaoMonitor,
+    str_para_ts,
     ts_para_str,
     verificar_invariantes,
 )
@@ -64,6 +70,39 @@ def _preservar_corrompido(arquivo: Path, agora: datetime) -> Path:
     return destino
 
 
+def _copiar_v1(arquivo: Path, agora: datetime) -> None:
+    """Cópia de segurança do state.json v1 antes da migração; falha só gera aviso."""
+    marca = agora.astimezone(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    destino = arquivo.with_name(f"{arquivo.name}.v1-{marca}")
+    try:
+        shutil.copy2(arquivo, destino)
+    except OSError:
+        evento(log, logging.WARNING, "estado_v1_sem_copia", "não foi possível copiar o state.json v1")
+
+
+def _migrar_v1(dados: dict, arquivo: Path, agora: datetime) -> EstadoMonitor:
+    """v1 -> v2: distribui `pendente_envio` pelas filas de canal, em ordem (feature 003)."""
+    estado = EstadoMonitor(
+        atualizado_em=str_para_ts(dados["atualizado_em"]),
+        monitor=SituacaoMonitor.de_dict(dados["monitor"]),
+        sites={k: Site.de_dict(v) for k, v in dados["sites"].items()},
+    )
+    for e in dados["pendente_envio"]:
+        ev = EventoNotificacao.de_dict(e)  # tipo desconhecido -> ValueError (estado inválido)
+        estado.filas[canal_do_evento(ev).value].append(ev)
+    violacoes = verificar_invariantes(estado)
+    if violacoes:
+        raise ValueError("invariantes violadas: " + "; ".join(violacoes[:3]))
+    _copiar_v1(arquivo, agora)
+    try:
+        salvar(estado, arquivo.parent, agora)
+    except OSError:  # o próximo salvar do daemon grava o v2; o v1 segue intacto em disco
+        evento(log, logging.WARNING, "estado_migrado_sem_gravar", "não foi possível gravar o v2 agora")
+    evento(log, logging.INFO, "estado_migrado", "state.json migrado para a versão 2",
+           de_versao=1, rede=len(estado.filas["rede"]), operacional=len(estado.filas["operacional"]))
+    return estado
+
+
 def carregar(state_dir: Path, agora: datetime) -> tuple[EstadoMonitor, str | None]:
     """Lê o estado. Devolve (estado, motivo_linha_base).
 
@@ -87,12 +126,17 @@ def carregar(state_dir: Path, agora: datetime) -> tuple[EstadoMonitor, str | Non
                 f"state.json tem schema_version={versao}, suportado até {SCHEMA_VERSION}",
             )
             raise SystemExit(1)
+        if versao == 1:
+            return _migrar_v1(dados, arquivo, agora), None
         if versao != SCHEMA_VERSION:
             raise ValueError("schema_version ausente ou inválido")
         estado = EstadoMonitor.de_dict(dados)
         violacoes = verificar_invariantes(estado)
         if violacoes:
             raise ValueError("invariantes violadas: " + "; ".join(violacoes[:3]))
+        for nome, fila in estado.filas.items():
+            if any(canal_do_evento(ev).value != nome for ev in fila):
+                raise ValueError(f"evento na fila errada: {nome}")
         return estado, None
     except SystemExit:
         raise

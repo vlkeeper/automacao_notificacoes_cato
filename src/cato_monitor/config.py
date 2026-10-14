@@ -32,6 +32,7 @@ class Config:
     cato_account_id: str
     cato_api_url: str
     teams_webhook_url: str
+    teams_webhook_operacional_url: str
     heartbeat_url: str
     intervalo_segundos: int
     tolerancia_segundos: int
@@ -43,7 +44,8 @@ class Config:
 
     def segredos(self) -> list[str]:
         """Valores literais que nunca podem aparecer em logs."""
-        return [self.cato_api_key, self.teams_webhook_url, self.heartbeat_url]
+        return [self.cato_api_key, self.teams_webhook_url, self.teams_webhook_operacional_url,
+                self.heartbeat_url]
 
     def exibicao(self) -> dict[str, object]:
         """Configuração efetiva com os segredos mascarados."""
@@ -52,6 +54,7 @@ class Config:
             "CATO_ACCOUNT_ID": self.cato_account_id,
             "CATO_API_URL": self.cato_api_url,
             "TEAMS_WEBHOOK_URL": _host(self.teams_webhook_url),
+            "TEAMS_WEBHOOK_OPERACIONAL_URL": _host(self.teams_webhook_operacional_url),
             "HEARTBEAT_URL": _host(self.heartbeat_url),
             "INTERVALO_SEGUNDOS": self.intervalo_segundos,
             "TOLERANCIA_SEGUNDOS": self.tolerancia_segundos,
@@ -116,7 +119,7 @@ def ler_config(env: Mapping[str, str] | None = None) -> Config:
         erros.append("CATO_API_URL deve ser uma URL https://")
 
     urls: dict[str, str] = {}
-    for nome in ("TEAMS_WEBHOOK_URL", "HEARTBEAT_URL"):
+    for nome in ("TEAMS_WEBHOOK_URL", "TEAMS_WEBHOOK_OPERACIONAL_URL", "HEARTBEAT_URL"):
         valor = env.get(nome, "").strip()
         if not valor:
             erros.append(f"{nome} ausente")
@@ -162,6 +165,7 @@ def ler_config(env: Mapping[str, str] | None = None) -> Config:
         cato_account_id=account_id,
         cato_api_url=api_url,
         teams_webhook_url=urls["TEAMS_WEBHOOK_URL"],
+        teams_webhook_operacional_url=urls["TEAMS_WEBHOOK_OPERACIONAL_URL"],
         heartbeat_url=urls["HEARTBEAT_URL"],
         intervalo_segundos=intervalo,
         tolerancia_segundos=tolerancia,
