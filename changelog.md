@@ -1,5 +1,14 @@
 # Changelog
 
+## Não lançado — feature 003: canal operacional separado
+
+- Avisos de rede e avisos do robô vão a webhooks diferentes (`TEAMS_WEBHOOK_URL` = rede,
+  `TEAMS_WEBHOOK_OPERACIONAL_URL` = operacional).
+- **Exige ação na atualização:** a nova variável é obrigatória.
+- Uma fila persistida por canal, drenadas em paralelo; falha de um canal não atrasa o outro.
+- Aviso único "CANAL … SEM ENTREGA" (15 min) no outro canal, com normalização.
+- `state.json` passa para `schema_version` 2; v1 é migrado sem perda, com cópia `state.json.v1-<UTC>`.
+
 ## 0.1.0 — 2026-10-06
 
 Primeira versão do monitor de sockets Cato com avisos no Teams.

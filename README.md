@@ -36,7 +36,8 @@ Copie `.env.example` para `.env` e preencha. **Nunca versione o `.env`.**
 | `CATO_API_KEY` | sim | — | token somente leitura (segredo) |
 | `CATO_ACCOUNT_ID` | sim | — | id da conta (só dígitos) |
 | `CATO_API_URL` | não | `https://api.catonetworks.com/api/v1/graphql2` | endpoint (https) |
-| `TEAMS_WEBHOOK_URL` | sim | — | URL do fluxo do Teams (segredo, https) |
+| `TEAMS_WEBHOOK_URL` | sim | — | URL do fluxo do Teams do **canal de rede**: quedas, retornos e pendências do dia (segredo, https) |
+| `TEAMS_WEBHOOK_OPERACIONAL_URL` | sim | — | URL do fluxo do Teams do **canal operacional**: saúde do robô (segredo, https). Pode ser igual à de rede |
 | `HEARTBEAT_URL` | sim | — | URL do heartbeat (segredo, https) |
 | `INTERVALO_SEGUNDOS` | não | `60` | 30 a 120 |
 | `TOLERANCIA_SEGUNDOS` | não | `180` | 60 a 3600 e ≥ intervalo |
@@ -48,6 +49,20 @@ Copie `.env.example` para `.env` e preencha. **Nunca versione o `.env`.**
 Configuração inválida encerra o processo com `exit 1` e um log `config_invalida` (stderr) listando **todos**
 os erros, sem exibir segredos. Detalhes em
 [specs/001-cato-socket/contracts/configuracao.md](specs/001-cato-socket/contracts/configuracao.md).
+
+### Canais do Teams
+
+| Aviso | Canal |
+|---|---|
+| Link/site offline, de volta, pendências do dia | rede (`TEAMS_WEBHOOK_URL`) |
+| Monitor sem acesso à Cato, normalizado, iniciado | operacional (`TEAMS_WEBHOOK_OPERACIONAL_URL`) |
+| Canal de rede sem entrega / normalizado | operacional |
+| Canal operacional sem entrega / normalizado | rede |
+
+Cada canal tem sua própria fila persistida; um canal fora do ar não atrasa o outro. Após 15 min de
+falha contínua de entrega, um único aviso "CANAL … SEM ENTREGA" vai ao outro canal (e a normalização
+depois). **Atualização:** configure `TEAMS_WEBHOOK_OPERACIONAL_URL` antes de subir a nova versão. O
+`state.json` v1 é migrado automaticamente; `state.json.v1-<UTC>` é a cópia de segurança.
 
 ## Execução (Docker Compose)
 
