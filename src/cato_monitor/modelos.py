@@ -13,7 +13,10 @@ from typing import Any
 
 LIMITE_FALHAS = 5
 LIMITE_AUSENCIAS = 3
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
+CANAL_REDE = "rede"
+CANAL_OPERACIONAL = "operacional"
+NOMES_CANAIS = (CANAL_REDE, CANAL_OPERACIONAL)
 # Pendências por card do lembrete, para que cada card fique abaixo de ~24 KB (R-007).
 MAX_PENDENCIAS_POR_CARD = 40
 ORCAMENTO_BYTES_LEMBRETE = 18_000  # folga sobre o limite de 24 KB por card
@@ -40,6 +43,8 @@ class TipoEvento(str, Enum):
     MONITOR_FALHA = "MONITOR_FALHA"
     MONITOR_RECUPERADO = "MONITOR_RECUPERADO"
     MONITOR_INICIADO = "MONITOR_INICIADO"
+    CANAL_SEM_ENTREGA = "CANAL_SEM_ENTREGA"
+    CANAL_NORMALIZADO = "CANAL_NORMALIZADO"
 
 
 def ts_para_str(ts: datetime | None) -> str | None:
@@ -202,10 +207,34 @@ class EventoNotificacao:
 
 
 @dataclass
+class SituacaoEntrega:
+    """Situação da entrega de um canal do Teams (feature 003)."""
+
+    falha_desde: datetime | None = None
+    aviso_emitido: bool = False
+
+    def para_dict(self) -> dict[str, Any]:
+        return {"falha_desde": ts_para_str(self.falha_desde), "aviso_emitido": self.aviso_emitido}
+
+    @classmethod
+    def de_dict(cls, d: dict[str, Any]) -> "SituacaoEntrega":
+        return cls(falha_desde=str_para_ts(d["falha_desde"]), aviso_emitido=d["aviso_emitido"])
+
+
+def _filas_vazias() -> dict[str, list[EventoNotificacao]]:
+    return {nome: [] for nome in NOMES_CANAIS}
+
+
+def _entrega_vazia() -> dict[str, SituacaoEntrega]:
+    return {nome: SituacaoEntrega() for nome in NOMES_CANAIS}
+
+
+@dataclass
 class EstadoMonitor:
     monitor: SituacaoMonitor = field(default_factory=SituacaoMonitor)
     sites: dict[str, Site] = field(default_factory=dict)
-    pendente_envio: list[EventoNotificacao] = field(default_factory=list)
+    filas: dict[str, list[EventoNotificacao]] = field(default_factory=_filas_vazias)
+    entrega: dict[str, SituacaoEntrega] = field(default_factory=_entrega_vazia)
     atualizado_em: datetime | None = None
 
     def para_dict(self) -> dict[str, Any]:
@@ -214,7 +243,8 @@ class EstadoMonitor:
             "atualizado_em": ts_para_str(self.atualizado_em),
             "monitor": self.monitor.para_dict(),
             "sites": {k: v.para_dict() for k, v in self.sites.items()},
-            "pendente_envio": [e.para_dict() for e in self.pendente_envio],
+            "filas": {k: [e.para_dict() for e in v] for k, v in self.filas.items()},
+            "entrega": {k: v.para_dict() for k, v in self.entrega.items()},
         }
 
     @classmethod
@@ -223,7 +253,8 @@ class EstadoMonitor:
             atualizado_em=str_para_ts(d["atualizado_em"]),
             monitor=SituacaoMonitor.de_dict(d["monitor"]),
             sites={k: Site.de_dict(v) for k, v in d["sites"].items()},
-            pendente_envio=[EventoNotificacao.de_dict(e) for e in d["pendente_envio"]],
+            filas={k: [EventoNotificacao.de_dict(e) for e in v] for k, v in d["filas"].items()},
+            entrega={k: SituacaoEntrega.de_dict(v) for k, v in d["entrega"].items()},
         )
 
 
@@ -247,6 +278,14 @@ def verificar_invariantes(estado: EstadoMonitor) -> list[str]:
         checar(f"site {sid}", site)
         for lid, link in site.links.items():
             checar(f"link {sid}/{lid}", link)
+    for nome in NOMES_CANAIS:
+        if nome not in estado.filas:
+            erros.append(f"filas sem o canal {nome}")
+        if nome not in estado.entrega:
+            erros.append(f"entrega sem o canal {nome}")
+    for nome, sit in estado.entrega.items():
+        if sit.aviso_emitido and sit.falha_desde is None:
+            erros.append(f"entrega {nome}: aviso_emitido sem falha_desde")
     return erros
 
 

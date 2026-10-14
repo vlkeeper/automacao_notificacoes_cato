@@ -11,6 +11,7 @@ import requests
 
 from . import estado_store as store
 from . import heartbeat, teams
+from .canais import avaliar_entrega, canal_do_evento
 from .cato_client import CatoClient
 from .config import Config
 from .logs import evento
@@ -49,6 +50,10 @@ class Daemon:
     def _salvar(self) -> None:
         store.salvar(self.estado, self.cfg.state_dir, self.relogio.agora())
 
+    def _enfileirar(self, eventos) -> None:
+        for e in eventos:
+            self.estado.filas[canal_do_evento(e).value].append(e)
+
     def executar_ciclo(self) -> None:
         inicio = self._monotonico()
         agora = self.relogio.agora()
@@ -65,12 +70,26 @@ class Daemon:
             evento(log, logging.INFO, "evento_enfileirado", id=e.id, tipo=e.tipo.value)
 
         # Persiste ANTES de enviar: um evento gerado nunca se perde se o processo cair.
-        self.estado.pendente_envio.extend(eventos)
+        self._enfileirar(eventos)
         self._salvar()
 
-        enviados = teams.drenar(
+        resultados = teams.drenar_todos(
             self.estado, self.cfg, self._salvar, self._sessao_teams, self._dormir_envio
         )
+        enviados = sum(n for n, _ in resultados.values())
+
+        # Avisos de canal sem entrega/normalizado vão para a fila do OUTRO canal (enviados no próximo ciclo).
+        avisos = avaliar_entrega(self.estado, resultados, self.relogio.agora())
+        for a in avisos:
+            canal = a.dados["canal_afetado"]
+            if a.tipo.value == "CANAL_SEM_ENTREGA":
+                evento(log, logging.WARNING, "canal_sem_entrega", canal=canal,
+                       desde=a.dados["desde"], pendentes=a.dados["pendentes"])
+            else:
+                evento(log, logging.INFO, "canal_normalizado", canal=canal,
+                       duracao_s=a.dados["duracao_s"])
+        self._enfileirar(avisos)
+        self._salvar()
 
         concluido = self.relogio.agora()
         self.estado.monitor.ultimo_ciclo_concluido_em = concluido
@@ -88,7 +107,8 @@ class Daemon:
             consulta="ok" if isinstance(resultado, ConsultaOk) else "falhou",
             transicoes=len(det.transicoes),
             eventos_gerados=len(eventos),
-            fila_pendente=len(self.estado.pendente_envio),
+            fila_rede=len(self.estado.filas["rede"]),
+            fila_operacional=len(self.estado.filas["operacional"]),
             enviados=enviados,
             falhas_consecutivas=falhas,
         )

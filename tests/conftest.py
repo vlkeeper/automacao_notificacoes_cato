@@ -10,6 +10,7 @@ from datetime import time
 T0 = datetime(2026, 10, 6, 10, 0, 0, tzinfo=timezone.utc)
 
 URL_TEAMS = "https://prod-00.brazilsouth.logic.azure.com/workflows/abc123/triggers/manual?sig=SEGREDO-TEAMS"
+URL_OPERACIONAL = "https://prod-01.brazilsouth.logic.azure.com/workflows/def456/triggers/manual?sig=SEGREDO-OPERACIONAL"
 URL_HEARTBEAT = "https://hc-ping.com/11111111-2222-3333-4444-555555555555"
 TOKEN = "token-secreto-abcd1234"
 
@@ -37,6 +38,7 @@ def fazer_config(state_dir, **sobrescritas) -> Config:
         cato_account_id="1234567",
         cato_api_url="https://api.catonetworks.com/api/v1/graphql2",
         teams_webhook_url=URL_TEAMS,
+        teams_webhook_operacional_url=URL_OPERACIONAL,
         heartbeat_url=URL_HEARTBEAT,
         intervalo_segundos=60,
         tolerancia_segundos=180,
@@ -60,6 +62,7 @@ def env_valido(tmp_path):
         "CATO_API_KEY": TOKEN,
         "CATO_ACCOUNT_ID": "1234567",
         "TEAMS_WEBHOOK_URL": URL_TEAMS,
+        "TEAMS_WEBHOOK_OPERACIONAL_URL": URL_OPERACIONAL,
         "HEARTBEAT_URL": URL_HEARTBEAT,
         "STATE_DIR": str(tmp_path),
     }

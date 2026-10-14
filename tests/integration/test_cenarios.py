@@ -9,7 +9,7 @@ from cato_monitor import estado_store as store
 from cato_monitor.daemon import Daemon
 from cato_monitor.modelos import ConsultaFalhou, EstadoItem
 
-from ..conftest import URL_HEARTBEAT, URL_TEAMS, RelogioFake
+from ..conftest import URL_HEARTBEAT, URL_OPERACIONAL, URL_TEAMS, RelogioFake
 from ..helpers import obs_site, ok
 
 
@@ -44,11 +44,12 @@ class Ambiente:
         return self.daemon.estado
 
 
-def titulos():
-    """Títulos dos cards entregues ao Teams, em ordem."""
+def titulos(*urls):
+    """Títulos dos cards entregues ao Teams, em ordem (padrão: os dois canais, operacional antes)."""
     saida = []
-    for c in responses.calls:
-        if c.request.url == URL_TEAMS:
+    for url in (urls or (URL_OPERACIONAL, URL_TEAMS)):
+      for c in responses.calls:
+        if c.request.url == url:
             card = json.loads(c.request.body)["attachments"][0]["content"]
             saida.append(card["body"][0]["items"][0]["text"])
     return saida
@@ -60,6 +61,7 @@ def sem_emoji(lista):
 
 def registrar_http():
     responses.post(URL_TEAMS, status=202)
+    responses.post(URL_OPERACIONAL, status=202)
     responses.get(URL_HEARTBEAT, status=200)
     responses.get(URL_HEARTBEAT + "/fail", status=200)
 
@@ -97,8 +99,8 @@ def test_queda_apos_tolerancia_avisa_uma_vez(cfg, relogio):
     base(amb)
     for _ in range(8):
         amb.ciclo(duas_wans(w1=False))
-    assert sem_emoji(titulos()) == ["MONITOR INICIADO", "LINK OFFLINE"]
-    assert amb.estado.pendente_envio == []
+    assert sem_emoji(titulos()) == ["MONITOR INICIADO", "REDE OFFLINE"]
+    assert amb.estado.filas == {"rede": [], "operacional": []}
 
 
 @responses.activate
@@ -125,10 +127,10 @@ def test_reinicio_durante_a_tolerancia_notifica_no_prazo_sem_duplicar(cfg, relog
     amb.ciclo(duas_wans(w1=False))   # +120 s: ainda dentro
     assert len(titulos()) == 1
     amb.ciclo(duas_wans(w1=False))   # +180 s: tolerância cumprida
-    assert sem_emoji(titulos())[-1] == "LINK OFFLINE"
+    assert sem_emoji(titulos())[-1] == "REDE OFFLINE"
     amb.iniciar()
     amb.ciclo(duas_wans(w1=False))
-    assert sem_emoji(titulos()).count("LINK OFFLINE") == 1
+    assert sem_emoji(titulos()).count("REDE OFFLINE") == 1
 
 
 @responses.activate
@@ -159,7 +161,7 @@ def test_queda_e_retorno_com_duracao_correta(cfg, relogio):
     for _ in range(8):
         amb.ciclo(duas_wans(w1=False))
     amb.ciclo(duas_wans(), avancar=300)
-    assert sem_emoji(titulos()) == ["MONITOR INICIADO", "LINK OFFLINE", "LINK DE VOLTA"]
+    assert sem_emoji(titulos()) == ["MONITOR INICIADO", "REDE OFFLINE", "REDE DE VOLTA"]
     entregas = [c for c in responses.calls if c.request.url == URL_TEAMS]
     card = json.loads(entregas[-1].request.body)
     fatos = card["attachments"][0]["content"]["body"][1]["facts"]
@@ -185,20 +187,21 @@ def test_site_volta_com_link_fora(cfg, relogio):
 def test_teams_fora_reenvia_na_ordem_original_com_horario_original(cfg, relogio):
     responses.get(URL_HEARTBEAT, status=200)
     responses.post(URL_TEAMS, status=500)
+    responses.post(URL_OPERACIONAL, status=202)
     amb = Ambiente(cfg, relogio)
-    amb.ciclo(duas_wans())  # linha de base: MONITOR_INICIADO fica na fila
+    amb.ciclo(duas_wans())  # linha de base: MONITOR_INICIADO vai ao canal operacional
     for _ in range(8):
         amb.ciclo(duas_wans(w1=False))
-    assert [e.tipo.value for e in amb.estado.pendente_envio] == ["MONITOR_INICIADO", "LINK_OFFLINE"]
+    assert [e.tipo.value for e in amb.estado.filas["rede"]] == ["LINK_OFFLINE"]
     amb.ciclo(duas_wans(w1=False), avancar=3600)  # uma hora depois
     responses.replace(responses.POST, URL_TEAMS, status=202)
     amb.ciclo(duas_wans(w1=False))
-    assert amb.estado.pendente_envio == []
+    assert amb.estado.filas["rede"] == []
     cards = [json.loads(c.request.body)["attachments"][0]["content"]
              for c in responses.calls if c.request.url == URL_TEAMS and c.response.status_code == 202]
-    # reenvio na ordem original: INICIADO (1), LINK_OFFLINE (2), depois o lembrete das 8h (3)
-    assert [c["body"][-1]["text"] for c in cards] == ["Ref. evt-000001", "Ref. evt-000002", "Ref. evt-000003"]
-    corpo = cards[1]
+    # reenvio na ordem original no canal de rede: LINK_OFFLINE (2), depois o lembrete das 8h (3)
+    assert [c["body"][-1]["text"] for c in cards] == ["Ref. evt-000002", "Ref. evt-000003"]
+    corpo = cards[0]
     desde = [f for f in corpo["body"][1]["facts"] if f["title"] == "Desde:"][0]["value"]
     assert desde == amb.estado.sites["A"].links["W1"].inicio_queda.astimezone(cfg.tz).strftime("%d/%m/%Y %H:%M")
 
@@ -314,4 +317,4 @@ def test_ciclo_grava_estado_last_cycle_e_loga(cfg, relogio, caplog):
     assert (cfg.state_dir / "last_cycle").exists() and (cfg.state_dir / "state.json").exists()
     registro = [r for r in caplog.records if r.__dict__.get("event") == "ciclo_concluido"]
     assert registro and registro[0].consulta == "ok" and registro[0].enviados == 1
-    assert registro[0].falhas_consecutivas == 0 and registro[0].fila_pendente == 0
+    assert registro[0].falhas_consecutivas == 0 and registro[0].fila_rede == 0 and registro[0].fila_operacional == 0

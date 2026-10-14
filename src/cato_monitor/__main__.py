@@ -29,7 +29,8 @@ def main() -> int:
     if motivo is None:
         evento(log, logging.INFO, "estado_carregado", sites=len(estado.sites),
                links=sum(len(s.links) for s in estado.sites.values()),
-               pendentes=len(estado.pendente_envio))
+               pendentes_rede=len(estado.filas["rede"]),
+               pendentes_operacional=len(estado.filas["operacional"]))
     else:
         evento(log, logging.WARNING, "linha_base", "estado vazio: nova linha de base", motivo=motivo)
 

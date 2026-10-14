@@ -1,0 +1,49 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.4",
+  "msteams": {
+    "width": "Full"
+  },
+  "body": [
+    {
+      "type": "Container",
+      "style": "emphasis",
+      "bleed": true,
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "⚙️ CANAL OPERACIONAL SEM ENTREGA",
+          "wrap": true,
+          "size": "Large",
+          "weight": "Bolder"
+        }
+      ]
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        {
+          "title": "Sem entrega desde:",
+          "value": "06/10/2026 11:00"
+        },
+        {
+          "title": "Avisos pendentes:",
+          "value": "3"
+        }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "O monitor não consegue entregar avisos neste canal há mais de 15 minutos. Os avisos pendentes serão enviados, na ordem, assim que o canal voltar.",
+      "wrap": true
+    },
+    {
+      "type": "TextBlock",
+      "text": "Ref. evt-000123",
+      "wrap": true,
+      "isSubtle": true,
+      "size": "Small"
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 """Construtores de observações e estados para os testes do motor."""
 
+from cato_monitor.canais import canal_do_evento
 from cato_monitor.modelos import (
     ConsultaOk,
     EstadoItem,
@@ -63,6 +64,7 @@ class Simulador:
         if avancar:
             self.relogio.avancar(avancar)
         self.estado, eventos = avaliar_ciclo(self.estado, resultado, self.relogio.agora(), self.cfg)
-        self.estado.pendente_envio.extend(eventos)
+        for e in eventos:
+            self.estado.filas[canal_do_evento(e).value].append(e)
         self.todos.extend(eventos)
         return eventos

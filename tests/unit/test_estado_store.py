@@ -33,7 +33,7 @@ def _estado_exemplo() -> EstadoMonitor:
             ),
         },
     )
-    est.pendente_envio.append(
+    est.filas["rede"].append(
         EventoNotificacao(id="evt-000001", tipo=TipoEvento.LINK_OFFLINE, ocorrido_em=T0,
                           criado_em=T0, dados={"site_nome": "Filial Campinas"}, tentativas=2,
                           ultimo_erro="http_500")
@@ -136,7 +136,7 @@ def test_last_cycle_atomico(tmp_path):
 
 def test_json_valido_contra_schema(tmp_path):
     jsonschema = pytest.importorskip("jsonschema")
-    schema_path = Path(__file__).parents[2] / "specs/001-cato-socket/contracts/state-file.schema.json"
+    schema_path = Path(__file__).parents[2] / "specs/003-canal-operacional-teams/contracts/state-file-v2.schema.json"
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
     store.salvar(_estado_exemplo(), tmp_path, T0)
     dados = json.loads((tmp_path / "state.json").read_text(encoding="utf-8"))

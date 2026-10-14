@@ -30,7 +30,7 @@ def test_com_pendencias_gera_um_lembrete(cfg):
     ev = s.ciclo(obs(), avancar=120)        # 08:00
     assert tipos(ev) == ["LEMBRETE_DIARIO"]
     assert ev[0].dados["pendencias"] == [
-        {"site_nome": "Site A", "link_nome": "W1", "tipo": "WAN",
+        {"site_nome": "Site A", "link_nome": "W1", "tipo": "WAN", "socket": "",
          "inicio_queda": "2026-10-06T01:00:00+00:00"}
     ]
     assert s.estado.monitor.ultimo_lembrete_data == "2026-10-06"
