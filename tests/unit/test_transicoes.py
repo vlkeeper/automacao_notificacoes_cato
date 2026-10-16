@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from cato_monitor.modelos import EstadoItem, Link
+from cato_monitor.modelos import EstadoItem, Link, Socket
 from cato_monitor.transicoes import TipoAcao, proximo_estado
 
 from ..conftest import T0
@@ -77,3 +77,15 @@ def test_funcao_nao_altera_o_item_original():
     item = link()
     proximo_estado(item, True, T0, TOL)
     assert item.estado == EstadoItem.ONLINE
+
+
+def test_socket_usa_a_mesma_maquina_de_estados_e_zera_cobertura():
+    sock = Socket(nome="primário")
+    sock, acoes = proximo_estado(sock, True, T0, timedelta(seconds=180))
+    assert sock.estado == EstadoItem.PENDENTE_OFFLINE and acoes == []
+    sock, acoes = proximo_estado(sock, True, T0 + timedelta(seconds=180), timedelta(seconds=180))
+    assert sock.estado == EstadoItem.OFFLINE_NOTIFICADO and [a.tipo for a in acoes] == [TipoAcao.QUEDA]
+    sock.coberto_pelo_site = True
+    sock, acoes = proximo_estado(sock, False, T0 + timedelta(seconds=300), timedelta(seconds=180))
+    assert sock.estado == EstadoItem.ONLINE and not sock.coberto_pelo_site and sock.inicio_queda is None
+    assert acoes[0].tipo == TipoAcao.RETORNO and acoes[0].duracao == timedelta(seconds=300)

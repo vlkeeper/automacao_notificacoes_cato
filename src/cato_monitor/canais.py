@@ -33,6 +33,8 @@ MAPA_CANAL: dict[TipoEvento, Canal] = {
     TipoEvento.SITE_OFFLINE: Canal.REDE,
     TipoEvento.LINK_RETORNO: Canal.REDE,
     TipoEvento.SITE_RETORNO: Canal.REDE,
+    TipoEvento.SOCKET_OFFLINE: Canal.REDE,
+    TipoEvento.SOCKET_RETORNO: Canal.REDE,
     TipoEvento.LEMBRETE_DIARIO: Canal.REDE,
     TipoEvento.MONITOR_FALHA: Canal.OPERACIONAL,
     TipoEvento.MONITOR_RECUPERADO: Canal.OPERACIONAL,

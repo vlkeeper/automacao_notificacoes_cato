@@ -1,0 +1,57 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.4",
+  "msteams": {
+    "width": "Full"
+  },
+  "body": [
+    {
+      "type": "Container",
+      "style": "good",
+      "bleed": true,
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "🟢 SOCKET DE VOLTA",
+          "wrap": true,
+          "size": "Large",
+          "weight": "Bolder"
+        }
+      ]
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        {
+          "title": "Site:",
+          "value": "Filial Campinas"
+        },
+        {
+          "title": "Socket:",
+          "value": "secundário"
+        },
+        {
+          "title": "Desde:",
+          "value": "06/10/2026 10:00"
+        },
+        {
+          "title": "Duração:",
+          "value": "1 h 25 min"
+        }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "O socket secundário voltou após 1 h 25 min. A redundância do site foi restabelecida.",
+      "wrap": true
+    },
+    {
+      "type": "TextBlock",
+      "text": "Ref. evt-000123",
+      "wrap": true,
+      "isSubtle": true,
+      "size": "Small"
+    }
+  ]
+}

@@ -5,6 +5,8 @@ retorno de **links** e **sites** e avisa um canal do Microsoft Teams com cards e
 
 - **Queda**: só avisa depois da tolerância (padrão 180 s) e uma única vez por episódio. Distingue
   `LINK OFFLINE` (operação parcial) de `SITE OFFLINE` (todos os links fora ou site desconectado da Cato).
+- **Sites HA**: a queda de um socket inteiro gera um único `SOCKET OFFLINE` (e `SOCKET DE VOLTA` no retorno),
+  sem um `REDE OFFLINE` por porta; se o site inteiro cai, só o `SITE OFFLINE` é avisado.
 - **Retorno**: avisa só quando a queda foi comunicada, com a duração.
 - **Lembrete diário** (padrão 08:00, horário de Brasília): lista o que continua fora; nunca repete no mesmo dia.
 - **Saúde do próprio monitor**: após 5 falhas seguidas de consulta avisa `MONITOR: SEM ACESSO À CATO` e,
@@ -54,7 +56,7 @@ os erros, sem exibir segredos. Detalhes em
 
 | Aviso | Canal |
 |---|---|
-| Link/site offline, de volta, pendências do dia | rede (`TEAMS_WEBHOOK_URL`) |
+| Link/socket/site offline, de volta, pendências do dia | rede (`TEAMS_WEBHOOK_URL`) |
 | Monitor sem acesso à Cato, normalizado, iniciado | operacional (`TEAMS_WEBHOOK_OPERACIONAL_URL`) |
 | Canal de rede sem entrega / normalizado | operacional |
 | Canal operacional sem entrega / normalizado | rede |

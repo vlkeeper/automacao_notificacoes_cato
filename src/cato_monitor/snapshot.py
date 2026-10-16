@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .modelos import ConsultaFalhou, ObservacaoLink, ObservacaoSite, Snapshot
+from .modelos import ConsultaFalhou, ObservacaoLink, ObservacaoSite, ObservacaoSocket, Snapshot
 
 STATUS_CONECTADO = "connected"
 STATUS_DESCONECTADO = "disconnected"
@@ -39,6 +39,22 @@ def _rotulo_socket(device: dict[str, Any], site_ha: bool) -> str:
     if papel in ("BACKUP", "SECONDARY"):
         return "secundário"
     return ""
+
+
+def _socket_do_device(device: dict[str, Any], site_ha: bool) -> tuple[str, ObservacaoSocket] | None:
+    """Observação do socket (R-001): `device.connected` quando booleano; sem o campo, só conta como
+    desconectado se há ≥ 1 WAN observada e todas estão offline. LAN/"HA link" não entram."""
+    info = device.get("socketInfo") or {}
+    chave = info.get("id") or device.get("id")
+    if not chave:
+        return None
+    if isinstance(device.get("connected"), bool):
+        conectado = device["connected"]
+    else:
+        wans = [i for i in device.get("interfaces") or [] if i.get("id")]
+        conectado = not (wans and all(i.get("connected") is not True for i in wans))
+    nome = _rotulo_socket(device, site_ha) or info.get("serial") or str(chave)
+    return str(chave), ObservacaoSocket(nome=nome, conectado=conectado)
 
 
 def _links_do_device(
@@ -114,8 +130,13 @@ def normalizar(resposta: Any, permitir_vazio: bool = True) -> Snapshot | Consult
         if conectado and not devices:
             continue  # site conectado sem devices: observação inválida (omitido)
 
+        # Site HA: isHA ou mais de um device (R-002). Só ele tem sockets observados.
+        site_ha = info.get("isHA") is True or len(devices or []) > 1
         links: dict[str, ObservacaoLink] = {}
+        sockets: dict[str, ObservacaoSocket] = {}
         for device in devices or []:  # site desconectado sem devices: links sem observação
-            links.update(_links_do_device(device, ids_lan, site_ha=len(devices or []) > 1))
-        sites[str(s["id"])] = ObservacaoSite(nome=nome, conectado=conectado, links=links)
+            links.update(_links_do_device(device, ids_lan, site_ha=site_ha))
+            if site_ha and (par := _socket_do_device(device, site_ha)):
+                sockets[par[0]] = par[1]
+        sites[str(s["id"])] = ObservacaoSite(nome=nome, conectado=conectado, links=links, sockets=sockets)
     return Snapshot(sites=sites)

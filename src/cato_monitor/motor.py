@@ -27,9 +27,11 @@ from .modelos import (
     Link,
     ObservacaoLink,
     ObservacaoSite,
+    ObservacaoSocket,
     Origem,
     ResultadoConsulta,
     Site,
+    Socket,
     TipoEvento,
     ts_para_str,
 )
@@ -64,19 +66,37 @@ def _novo_link(obs: ObservacaoLink, agora: datetime) -> Link:
     return Link(nome=obs.nome, tipo=obs.tipo, socket=obs.socket, **_item_baseline(not obs.online, agora))
 
 
+def socket_do_link(link_id: str) -> str:
+    """Chave do socket de um link: o prefixo do id (`<chave_socket>/<iid>`, R-003)."""
+    return link_id.split("/", 1)[0]
+
+
+def _novo_socket(obs: ObservacaoSocket, agora: datetime) -> Socket:
+    return Socket(nome=obs.nome, **_item_baseline(not obs.conectado, agora))
+
+
 def _novo_site(obs: ObservacaoSite, agora: datetime) -> Site:
     site = Site(nome=obs.nome, **_item_baseline(_site_offline(obs), agora))
     site.links = {lid: _novo_link(l, agora) for lid, l in obs.links.items()}
+    site.sockets = {kid: _novo_socket(k, agora) for kid, k in obs.sockets.items()}
     if site.estado == EstadoItem.OFFLINE_NOTIFICADO:
-        # Site inteiro fora: os links offline ficam cobertos por ele (sem duplicar nos avisos).
+        # Site inteiro fora: links e sockets offline ficam cobertos por ele (sem duplicar nos avisos).
         for link in site.links.values():
             if link.estado == EstadoItem.OFFLINE_NOTIFICADO:
                 link.coberto_pelo_site = True
+        for sock in site.sockets.values():
+            if sock.estado == EstadoItem.OFFLINE_NOTIFICADO:
+                sock.coberto_pelo_site = True
     return site
 
 
 def _limpar_link(link: Link) -> Link:
     return replace(link, estado=EstadoItem.ONLINE, inicio_queda=None, notificado=False,
+                   coberto_pelo_site=False)
+
+
+def _limpar_socket(sock: Socket) -> Socket:
+    return replace(sock, estado=EstadoItem.ONLINE, inicio_queda=None, notificado=False,
                    coberto_pelo_site=False)
 
 
@@ -212,12 +232,22 @@ def _pendencias(est: EstadoMonitor) -> list[dict[str, Any]]:
 
 
 def _itens_links(site: Site, extra: dict[str, Any]) -> list[dict[str, Any]]:
-    """Links offline do site (fora os cobertos pelo site inteiro); um socket com todos os links
-    offline vira um único item (tipo SOCKET)."""
+    """Pendências do site (fora as cobertas pelo site inteiro): um item por socket HA offline (e
+    nenhum de suas portas); um socket com todos os links offline também vira um item (tipo SOCKET)."""
     com_inicio = bool(extra)
-    offline = [l for _, l in sorted(site.links.items())
-               if l.estado == EstadoItem.OFFLINE_NOTIFICADO and not l.coberto_pelo_site]
     saida: list[dict[str, Any]] = []
+    sockets_fora: set[str] = set()
+    for kid, sock in sorted(site.sockets.items()):
+        if sock.estado == EstadoItem.OFFLINE_NOTIFICADO and not sock.coberto_pelo_site:
+            sockets_fora.add(kid)
+            item = {"site_nome": site.nome, "link_nome": None, "tipo": "SOCKET",
+                    "socket": sock.nome}
+            if com_inicio:
+                item["inicio_queda"] = ts_para_str(sock.inicio_queda)
+            saida.append(item)
+    offline = [l for lid, l in sorted(site.links.items())
+               if l.estado == EstadoItem.OFFLINE_NOTIFICADO and not l.coberto_pelo_site
+               and socket_do_link(lid) not in sockets_fora]
     sockets_resumidos: set[str] = set()
     for link in offline:
         sock = link.socket
@@ -256,8 +286,9 @@ def _dividir_pendencias(pendencias: list[dict[str, Any]]) -> list[list[dict[str,
 
 def _transicao(det: Detalhes, item: str, sid: str, lid: str | None, de: EstadoItem, para: EstadoItem) -> None:
     if de != para:
+        alvo = "socket_id" if item == "socket" else "link_id"
         det.transicoes.append(
-            {"item": item, "site_id": sid, "link_id": lid, "de": de.value, "para": para.value}
+            {"item": item, "site_id": sid, alvo: lid, "de": de.value, "para": para.value}
         )
 
 
@@ -277,6 +308,24 @@ def _avaliar_site(sid, site: Site, obs: ObservacaoSite, agora, tol, emitir, det:
             if site.links[lid].ausencias >= LIMITE_AUSENCIAS:
                 del site.links[lid]
                 det.registros.append({"event": "item_removido", "site_id": sid, "link_id": lid})
+
+    # --- inventário de sockets (só sites HA os têm; mesma regra de ausência dos links)
+    for kid, kobs in obs.sockets.items():
+        if kid not in site.sockets:
+            novo_sock = _novo_socket(kobs, agora)
+            if site.estado == EstadoItem.OFFLINE_NOTIFICADO and novo_sock.estado == EstadoItem.OFFLINE_NOTIFICADO:
+                novo_sock.coberto_pelo_site = True
+            site.sockets[kid] = novo_sock
+            det.registros.append({"event": "item_novo", "site_id": sid, "socket_id": kid})
+        else:
+            site.sockets[kid].ausencias = 0
+            site.sockets[kid].nome = kobs.nome
+    if obs.conectado:
+        for kid in [k for k in site.sockets if k not in obs.sockets]:
+            site.sockets[kid].ausencias += 1
+            if site.sockets[kid].ausencias >= LIMITE_AUSENCIAS:
+                del site.sockets[kid]
+                det.registros.append({"event": "item_removido", "site_id": sid, "socket_id": kid})
 
     # --- site (passo 5)
     estado_antes = site.estado
@@ -302,6 +351,13 @@ def _avaliar_site(sid, site: Site, obs: ObservacaoSite, agora, tol, emitir, det:
                     _transicao(det, "link", sid, lid, de, link.estado)
                     afetados.append([link.nome, link.tipo])
                 tratados.add(lid)
+            for kid, sock in site.sockets.items():
+                de = sock.estado
+                sock.estado = EstadoItem.OFFLINE_NOTIFICADO
+                sock.notificado = True
+                sock.coberto_pelo_site = True
+                sock.inicio_queda = sock.inicio_queda or site.inicio_queda
+                _transicao(det, "socket", sid, kid, de, sock.estado)
             if not obs.conectado:
                 afetados = [[l.nome, l.tipo] for l in site.links.values()]
             emitir(
@@ -312,6 +368,7 @@ def _avaliar_site(sid, site: Site, obs: ObservacaoSite, agora, tol, emitir, det:
             )
         else:  # RETORNO do site
             ainda_fora = []
+            sockets_fora = {k for k, o in obs.sockets.items() if k in site.sockets and not o.conectado}
             for lid, link in site.links.items():
                 if not link.coberto_pelo_site:
                     continue
@@ -322,7 +379,8 @@ def _avaliar_site(sid, site: Site, obs: ObservacaoSite, agora, tol, emitir, det:
                     site.links[lid] = _limpar_link(link)
                 elif lobs is not None:
                     link.coberto_pelo_site = False
-                    ainda_fora.append([link.nome, link.tipo, ts_para_str(link.inicio_queda)])
+                    if socket_do_link(lid) not in sockets_fora:
+                        ainda_fora.append([link.nome, link.tipo, ts_para_str(link.inicio_queda)])
                 else:
                     link.coberto_pelo_site = False
                 _transicao(det, "link", sid, lid, de, site.links[lid].estado)
@@ -338,16 +396,24 @@ def _avaliar_site(sid, site: Site, obs: ObservacaoSite, agora, tol, emitir, det:
             _links_sob_site_offline(sid, site, obs, agora, det)
         return
 
+    _avaliar_sockets(sid, site, obs, agora, tol, emitir, det)
+
     for lid in sorted(site.links):
         if lid in tratados:
             continue
+        sock = site.sockets.get(socket_do_link(lid))
+        if sock is not None and sock.estado == EstadoItem.OFFLINE_NOTIFICADO:
+            continue  # socket inteiro fora: as portas dele ficam silenciadas (FR-003)
         link = site.links[lid]
         lobs = obs.links.get(lid)
         obs_offline = None if lobs is None else not lobs.online
         antes = link.estado
         novo_link, acoes_l = proximo_estado(link, obs_offline, agora, tol)
-        if site.estado == EstadoItem.PENDENTE_OFFLINE and any(a.tipo == TipoAcao.QUEDA for a in acoes_l):
-            continue  # adia: reavalia no próximo ciclo, quando o site já estiver decidido
+        if any(a.tipo == TipoAcao.QUEDA for a in acoes_l) and (
+            site.estado == EstadoItem.PENDENTE_OFFLINE
+            or (sock is not None and sock.estado == EstadoItem.PENDENTE_OFFLINE)
+        ):
+            continue  # adia: reavalia no próximo ciclo, quando site/socket já estiverem decididos
         site.links[lid] = novo_link
         _transicao(det, "link", sid, lid, antes, novo_link.estado)
         for acao in acoes_l:
@@ -364,6 +430,56 @@ def _avaliar_site(sid, site: Site, obs: ObservacaoSite, agora, tol, emitir, det:
                     link_nome=novo_link.nome, link_tipo=novo_link.tipo, socket=novo_link.socket,
                     inicio_queda=ts_para_str(agora - acao.duracao), retorno_em=ts_para_str(agora),
                 )
+
+
+def _avaliar_sockets(sid, site: Site, obs: ObservacaoSite, agora, tol, emitir, det: Detalhes) -> None:
+    """Sockets do site HA (data-model §3): mesma máquina de estados, com efeitos sobre os links."""
+    for kid in sorted(site.sockets):
+        sock = site.sockets[kid]
+        kobs = obs.sockets.get(kid)
+        antes = sock.estado
+        if sock.coberto_pelo_site:  # queda absorvida pelo site que acabou de voltar (R-005)
+            if kobs is None:
+                continue
+            if kobs.conectado:
+                site.sockets[kid] = _limpar_socket(sock)
+            else:
+                sock.coberto_pelo_site = False
+                emitir(
+                    TipoEvento.SOCKET_OFFLINE, site_id=sid, site_nome=site.nome, socket_id=kid,
+                    socket=sock.nome, inicio_queda=ts_para_str(sock.inicio_queda),
+                )
+            _transicao(det, "socket", sid, kid, antes, site.sockets[kid].estado)
+            continue
+
+        obs_offline = None if kobs is None else not kobs.conectado
+        novo, acoes = proximo_estado(sock, obs_offline, agora, tol)
+        if site.estado == EstadoItem.PENDENTE_OFFLINE and any(a.tipo == TipoAcao.QUEDA for a in acoes):
+            continue  # adia: evita SOCKET OFFLINE seguido de SITE OFFLINE
+        site.sockets[kid] = novo
+        _transicao(det, "socket", sid, kid, antes, novo.estado)
+        for acao in acoes:
+            if acao.tipo == TipoAcao.QUEDA:
+                emitir(
+                    TipoEvento.SOCKET_OFFLINE, site_id=sid, site_nome=site.nome, socket_id=kid,
+                    socket=novo.nome, inicio_queda=ts_para_str(novo.inicio_queda),
+                )
+                for lid, link in site.links.items():  # queda pendente das portas é absorvida
+                    if socket_do_link(lid) == kid and link.estado == EstadoItem.PENDENTE_OFFLINE:
+                        site.links[lid] = _limpar_link(link)
+                        _transicao(det, "link", sid, lid, EstadoItem.PENDENTE_OFFLINE, EstadoItem.ONLINE)
+            else:
+                emitir(
+                    TipoEvento.SOCKET_RETORNO, site_id=sid, site_nome=site.nome, socket_id=kid,
+                    socket=novo.nome, inicio_queda=ts_para_str(agora - acao.duracao),
+                    retorno_em=ts_para_str(agora),
+                )
+                for lid, link in site.links.items():  # portas já online fecham sem aviso (R-006)
+                    lobs = obs.links.get(lid)
+                    if (socket_do_link(lid) == kid and link.estado == EstadoItem.OFFLINE_NOTIFICADO
+                            and lobs is not None and lobs.online):
+                        site.links[lid] = _limpar_link(link)
+                        _transicao(det, "link", sid, lid, EstadoItem.OFFLINE_NOTIFICADO, EstadoItem.ONLINE)
 
 
 def _links_sob_site_offline(sid, site: Site, obs: ObservacaoSite, agora, det: Detalhes) -> None:

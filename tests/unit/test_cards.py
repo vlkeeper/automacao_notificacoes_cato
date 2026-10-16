@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from cato_monitor.cards import ESTILOS, LIMITE_BYTES_CARD, renderizar
+from cato_monitor.cards import ESTILOS, LIMITE_BYTES_CARD, SEP, renderizar
 from cato_monitor.modelos import EventoNotificacao, TipoEvento
 
 TZ = ZoneInfo("America/Sao_Paulo")
@@ -34,6 +34,11 @@ DADOS = {
     TipoEvento.SITE_RETORNO: dict(site_id="1", site_nome="Filial Campinas", inicio_queda=INICIO,
                                   retorno_em="2026-10-06T14:25:00+00:00",
                                   links_ainda_offline=[["WAN2 - Operadora B", "WAN", INICIO]]),
+    TipoEvento.SOCKET_OFFLINE: dict(site_id="1", site_nome="Filial Campinas", socket_id="s-1",
+                                    socket="secundário", inicio_queda=INICIO),
+    TipoEvento.SOCKET_RETORNO: dict(site_id="1", site_nome="Filial Campinas", socket_id="s-1",
+                                    socket="secundário", inicio_queda=INICIO,
+                                    retorno_em="2026-10-06T14:25:00+00:00"),
     TipoEvento.LEMBRETE_DIARIO: dict(data_local="2026-10-06", parte=1, total_partes=2, pendencias=[
         {"site_nome": "Filial Campinas", "link_nome": "WAN2 - Operadora B", "tipo": "WAN", "inicio_queda": INICIO},
         {"site_nome": "Matriz São Paulo", "link_nome": None, "tipo": "SITE", "inicio_queda": "2026-10-04T13:00:00+00:00"},
@@ -136,6 +141,14 @@ def test_retorno_usa_duracao():
     assert "Duração: 1 h 25 min" in t and "Ainda fora: WAN2 - Operadora B (WAN)" in t
 
 
+def test_campos_dos_cards_de_socket():
+    t = "\n".join(textos(renderizar(evento(TipoEvento.SOCKET_OFFLINE), TZ)))
+    assert "Socket: secundário" in t and "Desde: 06/10/2026 10:00" in t
+    assert "sem redundância" in t
+    t = "\n".join(textos(renderizar(evento(TipoEvento.SOCKET_RETORNO), TZ)))
+    assert "Duração: 1 h 25 min" in t and "redundância do site foi restabelecida" in t
+
+
 def test_monitor_falha_deixa_claro_que_nao_e_queda():
     t = "\n".join(textos(renderizar(evento(TipoEvento.MONITOR_FALHA), TZ)))
     assert "Nenhum alerta de queda será emitido até normalizar." in t
@@ -176,3 +189,13 @@ def test_lembrete_agrupa_portas_do_mesmo_site():
     assert a[0][:2] == ["Matriz Teste", "StarLink-Test (WAN)"] and a[1]
     assert b[0][:2] == ["", "LAN1 (LAN)"] and not b[1]  # mesmo site: sem nome repetido nem separador
     assert c[0][0] == "Filial Campinas" and c[1]  # site diferente volta a separar
+
+
+def test_pendencia_de_socket_inteiro_nos_cards():
+    item = {"site_nome": "Filial Campinas", "link_nome": None, "tipo": "SOCKET",
+            "socket": "secundário"}
+    lembrete = evento(TipoEvento.LEMBRETE_DIARIO, data_local="2026-10-06", parte=1, total_partes=1,
+                      pendencias=[{**item, "inicio_queda": INICIO}])
+    assert "Socket secundário (inteiro)" in SEP.join(textos(renderizar(lembrete, TZ)))
+    iniciado = evento(TipoEvento.MONITOR_INICIADO, sites_total=1, links_total=2, itens_offline=[item])
+    assert "Socket secundário (inteiro)" in SEP.join(textos(renderizar(iniciado, TZ)))

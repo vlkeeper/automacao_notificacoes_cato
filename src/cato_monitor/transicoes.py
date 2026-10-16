@@ -1,4 +1,4 @@
-"""Tabela de transições de UM item (site ou link). Função pura: sem I/O nem relógio global."""
+"""Tabela de transições de UM item (site, link ou socket). Função pura: sem I/O nem relógio global."""
 
 from __future__ import annotations
 
@@ -7,9 +7,9 @@ from datetime import datetime, timedelta
 from enum import Enum
 from typing import TypeVar
 
-from .modelos import EstadoItem, Link, Site
+from .modelos import EstadoItem, Link, Site, Socket
 
-Item = TypeVar("Item", Site, Link)
+Item = TypeVar("Item", Site, Link, Socket)
 
 
 class TipoAcao(str, Enum):
@@ -25,7 +25,7 @@ class Acao:
 
 def _limpar(item: Item) -> Item:
     novo = replace(item, estado=EstadoItem.ONLINE, inicio_queda=None, notificado=False)
-    if isinstance(novo, Link):
+    if isinstance(novo, (Link, Socket)):
         novo = replace(novo, coberto_pelo_site=False)
     return novo
 

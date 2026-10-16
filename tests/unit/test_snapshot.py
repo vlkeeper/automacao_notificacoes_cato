@@ -128,3 +128,68 @@ def test_porta_desativada_nao_vira_link_lan():
         if i["id"] == "LAN1":
             i["destType"] = "INTERFACE_DISABLED"
     assert not any(l.tipo == "LAN" for l in normalizar(resp).sites["1"].links.values())
+
+
+# --------------------------------------------------------------------------- sockets (feature 004)
+
+
+def _site_ha(connected=(True, True), wans=((True,), (True,)), campo=True, is_ha=True, lan_up=True):
+    """Site HA mínimo com dois devices; `campo=False` omite `device.connected`."""
+    devices = []
+    for n, (conn, ws) in enumerate(zip(connected, wans)):
+        dev = {
+            "id": f"d{n}", "haRole": "MASTER",
+            "socketInfo": {"id": f"s{n}", "serial": f"SER{n}", "isPrimary": n == 0},
+            "interfaces": [{"id": f"WAN{i}", "name": f"WAN{i}", "connected": w} for i, w in enumerate(ws)],
+            "interfacesLinkState": [{"id": "LAN1", "up": lan_up}],
+        }
+        if campo:
+            dev["connected"] = conn
+        devices.append(dev)
+    return {"data": {"accountSnapshot": {"sites": [{
+        "id": "9", "connectivityStatus": "connected", "operationalStatus": "active",
+        "info": {"name": "Site HA", "isHA": is_ha,
+                 "interfaces": [{"id": "LAN1", "destType": "VRRP", "name": "HA link"}]},
+        "devices": devices,
+    }]}}}
+
+
+def test_socket_connected_true_e_false():
+    s = normalizar(_site_ha(connected=(True, False))).sites["9"]
+    assert s.sockets["s0"].conectado and s.sockets["s0"].nome == "primário"
+    assert not s.sockets["s1"].conectado and s.sockets["s1"].nome == "secundário"
+
+
+def test_socket_sem_campo_connected_com_todas_as_wans_offline_e_desconectado():
+    resp = _site_ha(campo=False, wans=((True, True), (False, False)))
+    s = normalizar(resp).sites["9"]
+    assert s.sockets["s0"].conectado and not s.sockets["s1"].conectado
+
+
+def test_socket_sem_campo_com_uma_wan_online_ou_sem_wan_e_conectado():
+    s = normalizar(_site_ha(campo=False, wans=((True, False), ()))).sites["9"]
+    assert s.sockets["s0"].conectado and s.sockets["s1"].conectado
+
+
+def test_lan_e_ha_link_nao_decidem_o_estado_do_socket():
+    s = normalizar(_site_ha(campo=False, lan_up=False)).sites["9"]
+    assert s.sockets["s0"].conectado and s.sockets["s1"].conectado
+
+
+def test_site_ha_por_is_ha_com_um_unico_device_listado():
+    resp = _site_ha()
+    resp["data"]["accountSnapshot"]["sites"][0]["devices"].pop()
+    s = normalizar(resp).sites["9"]
+    assert list(s.sockets) == ["s0"] and s.sockets["s0"].nome == "primário"
+
+
+def test_site_sem_ha_nao_tem_sockets():
+    resp = _site_ha(is_ha=False)
+    resp["data"]["accountSnapshot"]["sites"][0]["devices"].pop()
+    assert normalizar(resp).sites["9"].sockets == {}
+    assert all(s.sockets == {} for s in normalizar(carregar("todos_online")).sites.values())
+
+
+def test_fixture_ha_existente_expoe_dois_sockets():
+    sockets = normalizar(carregar("site_ha")).sites["3"].sockets
+    assert set(sockets) == {"s-3a", "s-3b"} and {k.nome for k in sockets.values()} == {"primário", "secundário"}

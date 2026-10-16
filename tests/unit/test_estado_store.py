@@ -13,6 +13,7 @@ from cato_monitor.modelos import (
     Link,
     Origem,
     Site,
+    Socket,
     TipoEvento,
     verificar_invariantes,
 )
@@ -138,6 +139,39 @@ def test_json_valido_contra_schema(tmp_path):
     jsonschema = pytest.importorskip("jsonschema")
     schema_path = Path(__file__).parents[2] / "specs/003-canal-operacional-teams/contracts/state-file-v2.schema.json"
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
-    store.salvar(_estado_exemplo(), tmp_path, T0)
+    est = _estado_exemplo()
+    est.sites["1001"].sockets = {"s-77": Socket(nome="primário")}
+    store.salvar(est, tmp_path, T0)
     dados = json.loads((tmp_path / "state.json").read_text(encoding="utf-8"))
     jsonschema.validate(dados, schema)
+
+
+def test_estado_v2_sem_sockets_carrega_como_vazio(tmp_path):
+    store.salvar(_estado_exemplo(), tmp_path, T0)
+    arquivo = tmp_path / "state.json"
+    dados = json.loads(arquivo.read_text(encoding="utf-8"))
+    del dados["sites"]["1001"]["sockets"]
+    arquivo.write_text(json.dumps(dados), encoding="utf-8")
+    lido, motivo = store.carregar(tmp_path, T0)
+    assert motivo is None and lido.sites["1001"].sockets == {}
+
+
+def test_sockets_ida_e_volta(tmp_path):
+    est = _estado_exemplo()
+    est.sites["1001"].sockets = {
+        "s-77": Socket(nome="primário"),
+        "s-78": Socket(nome="secundário", estado=EstadoItem.OFFLINE_NOTIFICADO,
+                       inicio_queda=T0, notificado=True, coberto_pelo_site=True),
+    }
+    store.salvar(est, tmp_path, T0)
+    lido, motivo = store.carregar(tmp_path, T0)
+    assert motivo is None and lido.para_dict() == est.para_dict()
+
+
+def test_socket_com_invariante_violada_vira_linha_de_base(tmp_path):
+    est = _estado_exemplo()
+    est.sites["1001"].sockets = {"s-77": Socket(nome="primário", notificado=True)}  # ONLINE notificado
+    assert verificar_invariantes(est)
+    store.salvar(est, tmp_path, T0)
+    lido, motivo = store.carregar(tmp_path, T0)
+    assert motivo is not None and lido.sites == {}

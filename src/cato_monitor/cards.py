@@ -20,6 +20,8 @@ ESTILOS: dict[TipoEvento, tuple[str, str, str]] = {
     TipoEvento.LINK_OFFLINE: ("🟠", "REDE OFFLINE", "warning"),
     TipoEvento.SITE_RETORNO: ("🟢", "SITE DE VOLTA", "good"),
     TipoEvento.LINK_RETORNO: ("🟢", "REDE DE VOLTA", "good"),
+    TipoEvento.SOCKET_OFFLINE: ("🟠", "SOCKET OFFLINE", "warning"),
+    TipoEvento.SOCKET_RETORNO: ("🟢", "SOCKET DE VOLTA", "good"),
     TipoEvento.LEMBRETE_DIARIO: ("📋", "PENDÊNCIAS DO DIA", "accent"),
     TipoEvento.MONITOR_FALHA: ("⚙️", "MONITOR: SEM ACESSO À CATO", "emphasis"),
     TipoEvento.MONITOR_RECUPERADO: ("⚙️", "MONITOR: ACESSO NORMALIZADO", "emphasis"),
@@ -62,7 +64,7 @@ def _link_txt(nome: str, tipo: str, socket: str = "") -> str:
 def _porta_item(i: dict[str, Any], site_inteiro: str) -> str:
     """Texto da porta de um item de pendência/resumo (link, socket inteiro ou site inteiro)."""
     if i["tipo"] == "SOCKET":
-        return f"Socket {i['socket']} offline (todos os links)"
+        return f"Socket {i['socket']} (inteiro)"
     if i["link_nome"]:
         return _link_txt(i["link_nome"], i["tipo"], i.get("socket", ""))
     return site_inteiro
@@ -162,6 +164,36 @@ def _site_retorno(e: EventoNotificacao, tz: tzinfo) -> list[dict[str, Any]]:
         lista = ", ".join(_link_txt(n, t) for n, t, _ in d["links_ainda_offline"])
         corpo.append(_texto(f"Ainda fora: {lista}", weight="Bolder"))
     return corpo
+
+
+def _socket_offline(e: EventoNotificacao, tz: tzinfo) -> list[dict[str, Any]]:
+    d = e.dados
+    return [
+        _fatos(
+            ("Site", d["site_nome"]),
+            ("Socket", d["socket"]),
+            ("Desde", formatar_horario(_ts(d["inicio_queda"]), tz)),
+        ),
+        _texto(
+            f"O socket **{d['socket']}** do site **{d['site_nome']}** está desconectado. "
+            "O site continua funcionando pelo outro socket, sem redundância."
+        ),
+    ]
+
+
+def _socket_retorno(e: EventoNotificacao, tz: tzinfo) -> list[dict[str, Any]]:
+    d = e.dados
+    inicio, volta = _ts(d["inicio_queda"]), _ts(d["retorno_em"])
+    duracao = formatar_duracao((volta - inicio).total_seconds())
+    return [
+        _fatos(
+            ("Site", d["site_nome"]),
+            ("Socket", d["socket"]),
+            ("Desde", formatar_horario(inicio, tz)),
+            ("Duração", duracao),
+        ),
+        _texto(f"O socket {d['socket']} voltou após {duracao}. A redundância do site foi restabelecida."),
+    ]
 
 
 def _coluna(texto: str, largura: str, **extra: Any) -> dict[str, Any]:
@@ -280,6 +312,8 @@ _TEMPLATES = {
     TipoEvento.LINK_OFFLINE: _link_offline,
     TipoEvento.SITE_OFFLINE: _site_offline,
     TipoEvento.LINK_RETORNO: _link_retorno,
+    TipoEvento.SOCKET_OFFLINE: _socket_offline,
+    TipoEvento.SOCKET_RETORNO: _socket_retorno,
     TipoEvento.SITE_RETORNO: _site_retorno,
     TipoEvento.LEMBRETE_DIARIO: _lembrete,
     TipoEvento.MONITOR_FALHA: _monitor_falha,

@@ -67,3 +67,5 @@ Regras:
 - Cada tipo de evento tem um *snapshot test* do JSON do card.
 
 > **Feature 003**: o destino passa a depender do tipo do aviso (dois canais); veja `specs/003-canal-operacional-teams/contracts/teams-canais.md`.
+>
+> **Feature 004**: acrescenta os cards `SOCKET OFFLINE` e `SOCKET DE VOLTA` (canal de rede); veja `specs/004-segmentacao-socket-site-ha/contracts/avisos-socket.md`.

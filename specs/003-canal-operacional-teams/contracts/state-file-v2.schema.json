@@ -187,6 +187,21 @@
         }
       }
     },
+    "socket": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/item_base"
+        }
+      ],
+      "required": [
+        "coberto_pelo_site"
+      ],
+      "properties": {
+        "coberto_pelo_site": {
+          "type": "boolean"
+        }
+      }
+    },
     "site": {
       "allOf": [
         {
@@ -201,6 +216,12 @@
           "type": "object",
           "additionalProperties": {
             "$ref": "#/$defs/link"
+          }
+        },
+        "sockets": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/socket"
           }
         }
       }
@@ -228,6 +249,8 @@
             "SITE_OFFLINE",
             "LINK_RETORNO",
             "SITE_RETORNO",
+            "SOCKET_OFFLINE",
+            "SOCKET_RETORNO",
             "LEMBRETE_DIARIO",
             "MONITOR_FALHA",
             "MONITOR_RECUPERADO",

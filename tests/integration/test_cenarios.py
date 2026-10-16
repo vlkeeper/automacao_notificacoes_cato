@@ -10,7 +10,7 @@ from cato_monitor.daemon import Daemon
 from cato_monitor.modelos import ConsultaFalhou, EstadoItem
 
 from ..conftest import URL_HEARTBEAT, URL_OPERACIONAL, URL_TEAMS, RelogioFake
-from ..helpers import obs_site, ok
+from ..helpers import obs_site, obs_socket, ok
 
 
 class ClienteFalso:
@@ -318,3 +318,70 @@ def test_ciclo_grava_estado_last_cycle_e_loga(cfg, relogio, caplog):
     registro = [r for r in caplog.records if r.__dict__.get("event") == "ciclo_concluido"]
     assert registro and registro[0].consulta == "ok" and registro[0].enviados == 1
     assert registro[0].falhas_consecutivas == 0 and registro[0].fila_rede == 0 and registro[0].fila_operacional == 0
+
+
+# ---------------------------------------------------------------- sockets de site HA (feature 004)
+
+
+def site_ha(c1=True, c2=True, w2=True):
+    """Site HA: portas do socket desconectado vêm offline."""
+    return ok(A=obs_site(
+        "Site A",
+        sockets={"s1": obs_socket(c1, "primário"), "s2": obs_socket(c2, "secundário")},
+        **{"s1/W1": c1, "s2/W1": c2 and w2},
+    ))
+
+
+@responses.activate
+def test_socket_cai_e_volta_com_um_aviso_cada_sem_avisos_de_porta(cfg, relogio):
+    registrar_http()
+    amb = Ambiente(cfg, relogio)
+    amb.ciclo(site_ha())
+    for _ in range(8):
+        amb.ciclo(site_ha(c2=False))
+    for _ in range(3):
+        amb.ciclo(site_ha())
+    assert sem_emoji(titulos()) == ["MONITOR INICIADO", "SOCKET OFFLINE", "SOCKET DE VOLTA"]
+    assert titulos(URL_OPERACIONAL) == ["⚙️ MONITOR INICIADO"]  # os de socket vão para o canal de rede
+
+
+@responses.activate
+def test_ambos_caem_so_site_offline_e_site_volta_com_um_socket(cfg, relogio):
+    registrar_http()
+    amb = Ambiente(cfg, relogio)
+    amb.ciclo(site_ha())
+    for _ in range(8):
+        amb.ciclo(site_ha(c1=False, c2=False))
+    amb.ciclo(site_ha(c2=False))
+    for _ in range(2):
+        amb.ciclo(site_ha(c2=False))
+    amb.ciclo(site_ha())
+    assert sem_emoji(titulos(URL_TEAMS)) == [
+        "SITE OFFLINE", "SITE DE VOLTA", "SOCKET OFFLINE", "SOCKET DE VOLTA"]
+
+
+@responses.activate
+def test_reinicio_com_socket_offline_nao_duplica_e_avisa_o_retorno(cfg, relogio):
+    registrar_http()
+    amb = Ambiente(cfg, relogio)
+    amb.ciclo(site_ha())
+    for _ in range(5):
+        amb.ciclo(site_ha(c2=False))
+    amb.iniciar()  # reinício do contêiner com o socket já avisado
+    for _ in range(3):
+        amb.ciclo(site_ha(c2=False))
+    amb.ciclo(site_ha())
+    assert sem_emoji(titulos(URL_TEAMS)) == ["SOCKET OFFLINE", "SOCKET DE VOLTA"]
+
+
+@responses.activate
+def test_site_nao_ha_segue_igual_sem_sockets_no_estado(cfg, relogio):
+    registrar_http()
+    amb = Ambiente(cfg, relogio)
+    base(amb)
+    for _ in range(8):
+        amb.ciclo(duas_wans(w1=False))
+    for _ in range(2):
+        amb.ciclo(duas_wans())
+    assert sem_emoji(titulos(URL_TEAMS)) == ["REDE OFFLINE", "REDE DE VOLTA"]
+    assert amb.estado.sites["A"].sockets == {}

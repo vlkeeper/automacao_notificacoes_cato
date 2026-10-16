@@ -1,0 +1,53 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.4",
+  "msteams": {
+    "width": "Full"
+  },
+  "body": [
+    {
+      "type": "Container",
+      "style": "warning",
+      "bleed": true,
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "🟠 SOCKET OFFLINE",
+          "wrap": true,
+          "size": "Large",
+          "weight": "Bolder"
+        }
+      ]
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        {
+          "title": "Site:",
+          "value": "Filial Campinas"
+        },
+        {
+          "title": "Socket:",
+          "value": "secundário"
+        },
+        {
+          "title": "Desde:",
+          "value": "06/10/2026 10:00"
+        }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "O socket **secundário** do site **Filial Campinas** está desconectado. O site continua funcionando pelo outro socket, sem redundância.",
+      "wrap": true
+    },
+    {
+      "type": "TextBlock",
+      "text": "Ref. evt-000123",
+      "wrap": true,
+      "isSubtle": true,
+      "size": "Small"
+    }
+  ]
+}

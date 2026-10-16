@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
-from cato_monitor.modelos import ConsultaFalhou, EstadoItem, EstadoMonitor, MAX_PENDENCIAS_POR_CARD
+from cato_monitor.modelos import ConsultaFalhou, EstadoItem, EstadoMonitor, MAX_PENDENCIAS_POR_CARD, Socket
 
 from ..conftest import RelogioFake
 from ..helpers import Simulador, estado_online, obs_site, ok, tipos
@@ -121,3 +121,44 @@ def test_divide_em_partes_quando_ha_muitas_pendencias(cfg):
     assert tipos(ev) == ["LEMBRETE_DIARIO"] * 3
     assert [(e.dados["parte"], e.dados["total_partes"]) for e in ev] == [(1, 3), (2, 3), (3, 3)]
     assert sum(len(e.dados["pendencias"]) for e in ev) == n
+
+
+def _estado_ha(coberto=False, site_offline=False):
+    est = estado_online(sockets={"A": {"s1": "primário", "s2": "secundário"}}, A=["s2/W1", "s2/L1", "s1/W1"])
+    site = est.sites["A"]
+    inicio = OITO - timedelta(hours=5)
+    site.sockets["s2"] = Socket(nome="secundário", estado=EstadoItem.OFFLINE_NOTIFICADO, inicio_queda=inicio,
+                                notificado=True, coberto_pelo_site=coberto)
+    for lid in ("s2/W1", "s2/L1"):
+        l = site.links[lid]
+        l.estado, l.notificado, l.inicio_queda = EstadoItem.OFFLINE_NOTIFICADO, True, inicio
+        l.coberto_pelo_site = coberto
+    if site_offline:
+        site.estado, site.notificado, site.inicio_queda = EstadoItem.OFFLINE_NOTIFICADO, True, inicio
+    est.monitor.ultimo_lembrete_data = "2026-10-05"
+    return est
+
+
+def _obs_ha(c2=False, site_conectado=True):
+    from cato_monitor.modelos import ObservacaoSocket
+    return ok(A=obs_site("Site A", conectado=site_conectado,
+                         sockets={"s1": ObservacaoSocket("primário", True), "s2": ObservacaoSocket("secundário", c2)},
+                         **{"s1/W1": True, "s2/W1": c2, "s2/L1": c2}))
+
+
+def test_socket_offline_gera_uma_pendencia_e_omite_as_portas(cfg):
+    rel = RelogioFake(OITO - timedelta(seconds=120))
+    s = Simulador(cfg, rel, _estado_ha())
+    ev = s.ciclo(_obs_ha(), avancar=120)
+    assert tipos(ev) == ["LEMBRETE_DIARIO"]
+    assert ev[0].dados["pendencias"] == [
+        {"site_nome": "Site A", "link_nome": None, "tipo": "SOCKET", "socket": "secundário",
+         "inicio_queda": "2026-10-06T06:00:00+00:00"}
+    ]
+
+
+def test_socket_coberto_pelo_site_nao_aparece_no_lembrete(cfg):
+    rel = RelogioFake(OITO - timedelta(seconds=120))
+    s = Simulador(cfg, rel, _estado_ha(coberto=True, site_offline=True))
+    ev = s.ciclo(ok(A=obs_site("Site A", conectado=False)), avancar=120)
+    assert [p["tipo"] for p in ev[0].dados["pendencias"]] == ["SITE"]

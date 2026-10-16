@@ -1,5 +1,15 @@
 # Changelog
 
+## Não lançado — feature 004: aviso único por socket em sites HA
+
+- Novos avisos `SOCKET OFFLINE` / `SOCKET DE VOLTA` (canal de rede) quando um socket de um par HA
+  fica desconectado: as portas dele deixam de gerar `REDE OFFLINE`/`REDE DE VOLTA` individuais.
+- A queda do site absorve os sockets; no retorno parcial do site: `SITE DE VOLTA` e depois `SOCKET OFFLINE`.
+- Lembrete e `MONITOR INICIADO` mostram uma linha "Socket … (inteiro)" por socket offline.
+- `state.json` ganha `sites.<id>.sockets` (aditivo; `schema_version` continua 2). Sites sem HA não mudam.
+- **Validar na conta real antes de publicar:** o device desconectado deve seguir em `devices` com
+  `connected: false` (quickstart §3).
+
 ## Não lançado — feature 003: canal operacional separado
 
 - Avisos de rede e avisos do robô vão a webhooks diferentes (`TEAMS_WEBHOOK_URL` = rede,

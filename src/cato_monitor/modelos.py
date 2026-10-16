@@ -45,6 +45,8 @@ class TipoEvento(str, Enum):
     MONITOR_INICIADO = "MONITOR_INICIADO"
     CANAL_SEM_ENTREGA = "CANAL_SEM_ENTREGA"
     CANAL_NORMALIZADO = "CANAL_NORMALIZADO"
+    SOCKET_OFFLINE = "SOCKET_OFFLINE"
+    SOCKET_RETORNO = "SOCKET_RETORNO"
 
 
 def ts_para_str(ts: datetime | None) -> str | None:
@@ -108,6 +110,42 @@ class Link:
 
 
 @dataclass
+class Socket:
+    """Socket de um site HA (feature 004): mesma máquina de estados de site/link."""
+
+    nome: str
+    estado: EstadoItem = EstadoItem.ONLINE
+    inicio_queda: datetime | None = None
+    notificado: bool = False
+    coberto_pelo_site: bool = False
+    origem: Origem = Origem.OBSERVADO
+    ausencias: int = 0
+
+    def para_dict(self) -> dict[str, Any]:
+        return {
+            "nome": self.nome,
+            "estado": self.estado.value,
+            "inicio_queda": ts_para_str(self.inicio_queda),
+            "notificado": self.notificado,
+            "coberto_pelo_site": self.coberto_pelo_site,
+            "origem": self.origem.value,
+            "ausencias": self.ausencias,
+        }
+
+    @classmethod
+    def de_dict(cls, d: dict[str, Any]) -> "Socket":
+        return cls(
+            nome=d["nome"],
+            estado=EstadoItem(d["estado"]),
+            inicio_queda=str_para_ts(d["inicio_queda"]),
+            notificado=d["notificado"],
+            coberto_pelo_site=d["coberto_pelo_site"],
+            origem=Origem(d["origem"]),
+            ausencias=d["ausencias"],
+        )
+
+
+@dataclass
 class Site:
     nome: str
     estado: EstadoItem = EstadoItem.ONLINE
@@ -116,6 +154,7 @@ class Site:
     origem: Origem = Origem.OBSERVADO
     ausencias: int = 0
     links: dict[str, Link] = field(default_factory=dict)
+    sockets: dict[str, Socket] = field(default_factory=dict)
 
     def para_dict(self) -> dict[str, Any]:
         return {
@@ -126,6 +165,7 @@ class Site:
             "origem": self.origem.value,
             "ausencias": self.ausencias,
             "links": {k: v.para_dict() for k, v in self.links.items()},
+            "sockets": {k: v.para_dict() for k, v in self.sockets.items()},
         }
 
     @classmethod
@@ -138,6 +178,8 @@ class Site:
             origem=Origem(d["origem"]),
             ausencias=d["ausencias"],
             links={k: Link.de_dict(v) for k, v in d["links"].items()},
+            # Campo aditivo da feature 004: estados anteriores não têm a chave (R-007).
+            sockets={k: Socket.de_dict(v) for k, v in d.get("sockets", {}).items()},
         )
 
 
@@ -262,11 +304,11 @@ def verificar_invariantes(estado: EstadoMonitor) -> list[str]:
     """Devolve a lista de violações das invariantes do data-model (vazia = íntegro)."""
     erros: list[str] = []
 
-    def checar(rotulo: str, item: Site | Link) -> None:
+    def checar(rotulo: str, item: Site | Link | Socket) -> None:
         if item.estado == EstadoItem.ONLINE:
             if item.inicio_queda is not None or item.notificado:
                 erros.append(f"{rotulo}: ONLINE com inicio_queda/notificado")
-            if isinstance(item, Link) and item.coberto_pelo_site:
+            if isinstance(item, (Link, Socket)) and item.coberto_pelo_site:
                 erros.append(f"{rotulo}: ONLINE com coberto_pelo_site")
         else:
             if item.inicio_queda is None:
@@ -278,6 +320,8 @@ def verificar_invariantes(estado: EstadoMonitor) -> list[str]:
         checar(f"site {sid}", site)
         for lid, link in site.links.items():
             checar(f"link {sid}/{lid}", link)
+        for kid, sock in site.sockets.items():
+            checar(f"socket {sid}/{kid}", sock)
     for nome in NOMES_CANAIS:
         if nome not in estado.filas:
             erros.append(f"filas sem o canal {nome}")
@@ -301,10 +345,17 @@ class ObservacaoLink:
 
 
 @dataclass(frozen=True)
+class ObservacaoSocket:
+    nome: str
+    conectado: bool
+
+
+@dataclass(frozen=True)
 class ObservacaoSite:
     nome: str
     conectado: bool
     links: dict[str, ObservacaoLink] = field(default_factory=dict)
+    sockets: dict[str, ObservacaoSocket] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
