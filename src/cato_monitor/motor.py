@@ -67,6 +67,11 @@ def _novo_link(obs: ObservacaoLink, agora: datetime) -> Link:
 def _novo_site(obs: ObservacaoSite, agora: datetime) -> Site:
     site = Site(nome=obs.nome, **_item_baseline(_site_offline(obs), agora))
     site.links = {lid: _novo_link(l, agora) for lid, l in obs.links.items()}
+    if site.estado == EstadoItem.OFFLINE_NOTIFICADO:
+        # Site inteiro fora: os links offline ficam cobertos por ele (sem duplicar nos avisos).
+        for link in site.links.values():
+            if link.estado == EstadoItem.OFFLINE_NOTIFICADO:
+                link.coberto_pelo_site = True
     return site
 
 
@@ -133,10 +138,7 @@ def avaliar_ciclo_detalhado(
             links_total += len(site.links)
             if site.estado == EstadoItem.OFFLINE_NOTIFICADO:
                 itens_offline.append({"site_nome": site.nome, "link_nome": None, "tipo": "SITE"})
-            for link in site.links.values():
-                if link.estado == EstadoItem.OFFLINE_NOTIFICADO:
-                    itens_offline.append({"site_nome": site.nome, "link_nome": link.nome, "tipo": link.tipo,
-                                          "socket": link.socket})
+            itens_offline += _itens_links(site, {})
         emitir(
             TipoEvento.MONITOR_INICIADO,
             sites_total=len(est.sites), links_total=links_total, itens_offline=itens_offline,
@@ -205,12 +207,37 @@ def _pendencias(est: EstadoMonitor) -> list[dict[str, Any]]:
         if site.estado == EstadoItem.OFFLINE_NOTIFICADO:
             itens.append({"site_nome": site.nome, "link_nome": None, "tipo": "SITE",
                           "inicio_queda": ts_para_str(site.inicio_queda)})
-        for lid in sorted(site.links):
-            link = site.links[lid]
-            if link.estado == EstadoItem.OFFLINE_NOTIFICADO and not link.coberto_pelo_site:
-                itens.append({"site_nome": site.nome, "link_nome": link.nome, "tipo": link.tipo,
-                              "socket": link.socket, "inicio_queda": ts_para_str(link.inicio_queda)})
+        itens += _itens_links(site, {"inicio_queda": True})
     return itens
+
+
+def _itens_links(site: Site, extra: dict[str, Any]) -> list[dict[str, Any]]:
+    """Links offline do site (fora os cobertos pelo site inteiro); um socket com todos os links
+    offline vira um único item (tipo SOCKET)."""
+    com_inicio = bool(extra)
+    offline = [l for _, l in sorted(site.links.items())
+               if l.estado == EstadoItem.OFFLINE_NOTIFICADO and not l.coberto_pelo_site]
+    saida: list[dict[str, Any]] = []
+    sockets_resumidos: set[str] = set()
+    for link in offline:
+        sock = link.socket
+        if sock and sock not in sockets_resumidos:
+            do_socket = [l for l in site.links.values() if l.socket == sock]
+            if len(do_socket) > 1 and all(l.estado == EstadoItem.OFFLINE_NOTIFICADO
+                                          and not l.coberto_pelo_site for l in do_socket):
+                sockets_resumidos.add(sock)
+                item = {"site_nome": site.nome, "link_nome": None, "tipo": "SOCKET", "socket": sock}
+                if com_inicio:
+                    item["inicio_queda"] = ts_para_str(min(l.inicio_queda for l in do_socket))
+                saida.append(item)
+                continue
+        if sock in sockets_resumidos:
+            continue
+        item = {"site_nome": site.nome, "link_nome": link.nome, "tipo": link.tipo, "socket": sock}
+        if com_inicio:
+            item["inicio_queda"] = ts_para_str(link.inicio_queda)
+        saida.append(item)
+    return saida
 
 
 def _dividir_pendencias(pendencias: list[dict[str, Any]]) -> list[list[dict[str, Any]]]:

@@ -157,3 +157,22 @@ def test_lembrete_dividido_pelo_motor_cabe_no_limite_com_nomes_longos():
         card = renderizar(ev, TZ)
         assert f"(parte {n}/{len(partes)})" in " ".join(textos(card))
         assert len(json.dumps(card, ensure_ascii=False).encode("utf-8")) <= LIMITE_BYTES_CARD
+
+
+def _linhas_da_tabela(card):
+    """Células de texto de cada ColumnSet do card (cabeçalho + linhas), com a marca de separador."""
+    return [([c["items"][0]["text"] for c in n["columns"]], bool(n.get("separator")))
+            for n in card["body"] if n.get("type") == "ColumnSet"]
+
+
+def test_lembrete_agrupa_portas_do_mesmo_site():
+    pend = [
+        {"site_nome": "Matriz Teste", "link_nome": "StarLink-Test", "tipo": "WAN", "socket": "", "inicio_queda": INICIO},
+        {"site_nome": "Matriz Teste", "link_nome": "LAN1", "tipo": "LAN", "socket": "", "inicio_queda": INICIO},
+        {"site_nome": "Filial Campinas", "link_nome": "WAN2", "tipo": "WAN", "socket": "", "inicio_queda": INICIO},
+    ]
+    ev = evento(TipoEvento.LEMBRETE_DIARIO, data_local="2026-10-06", parte=1, total_partes=1, pendencias=pend)
+    cab, a, b, c = _linhas_da_tabela(renderizar(ev, TZ))
+    assert a[0][:2] == ["Matriz Teste", "StarLink-Test (WAN)"] and a[1]
+    assert b[0][:2] == ["", "LAN1 (LAN)"] and not b[1]  # mesmo site: sem nome repetido nem separador
+    assert c[0][0] == "Filial Campinas" and c[1]  # site diferente volta a separar

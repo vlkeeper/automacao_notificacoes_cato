@@ -29,6 +29,17 @@ from cato_monitor.teams import _mensagem  # noqa: E402
 from tests.unit.test_cards import DADOS, OCORRIDO  # noqa: E402
 
 
+# Lembrete mais rico que o dos testes: mostra o agrupamento por site e os sockets de um site HA.
+_INI = "2026-10-14T21:39:00+00:00"
+_INI_CDA = "2026-10-15T20:45:00+00:00"
+DADOS = {**DADOS, TipoEvento.LEMBRETE_DIARIO: dict(data_local="2026-10-16", parte=1, total_partes=1, pendencias=[
+    {"site_nome": "019 - CDA", "link_nome": "Claro 4G", "tipo": "WAN", "socket": "secundário", "inicio_queda": _INI_CDA},
+    {"site_nome": "019 - CDA", "link_nome": "Claro 4G", "tipo": "WAN", "socket": "primário", "inicio_queda": _INI_CDA},
+    {"site_nome": "Matriz Teste", "link_nome": "LAN1", "tipo": "LAN", "socket": "", "inicio_queda": _INI},
+    {"site_nome": "Matriz Teste", "link_nome": "StarLink-Test", "tipo": "WAN", "socket": "", "inicio_queda": _INI},
+])}
+
+
 def _url_do_env() -> str:
     if os.environ.get("TEAMS_WEBHOOK_URL"):
         return os.environ["TEAMS_WEBHOOK_URL"]

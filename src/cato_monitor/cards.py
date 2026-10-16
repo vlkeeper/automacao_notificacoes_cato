@@ -59,6 +59,15 @@ def _link_txt(nome: str, tipo: str, socket: str = "") -> str:
     return f"{base} - socket {socket}" if socket else base
 
 
+def _porta_item(i: dict[str, Any], site_inteiro: str) -> str:
+    """Texto da porta de um item de pendência/resumo (link, socket inteiro ou site inteiro)."""
+    if i["tipo"] == "SOCKET":
+        return f"Socket {i['socket']} offline (todos os links)"
+    if i["link_nome"]:
+        return _link_txt(i["link_nome"], i["tipo"], i.get("socket", ""))
+    return site_inteiro
+
+
 def _fatos(*pares: tuple[str, str]) -> dict[str, Any]:
     return {"type": "FactSet", "facts": [{"title": t + ":", "value": v} for t, v in pares]}
 
@@ -160,15 +169,21 @@ def _coluna(texto: str, largura: str, **extra: Any) -> dict[str, Any]:
 
 
 def _tabela(cabecalhos: tuple[str, ...], linhas: list[tuple[str, ...]], larguras: tuple[str, ...]) -> list[dict[str, Any]]:
-    """Tabela com colunas de largura proporcional fixa (as mesmas em todas as linhas, para alinhar)."""
+    """Tabela com colunas de largura proporcional fixa (as mesmas em todas as linhas, para alinhar).
+
+    Linhas consecutivas com a mesma 1ª coluna formam um grupo: o valor aparece só na primeira
+    linha do grupo e o separador só é desenhado entre grupos."""
     def linha(celulas: tuple[str, ...], **extra: Any) -> dict[str, Any]:
         return {"type": "ColumnSet", **extra.pop("conj", {}),
                 "columns": [_coluna(c, w, **extra) for c, w in zip(celulas, larguras)]}
 
-    return [
-        linha(cabecalhos, weight="Bolder", conj={"style": "emphasis", "bleed": False}),
-        *[linha(cel, conj={"separator": True}) for cel in linhas],
-    ]
+    corpo = [linha(cabecalhos, weight="Bolder", conj={"style": "emphasis", "bleed": False})]
+    anterior = None
+    for cel in linhas:
+        repetida = cel[0] == anterior
+        corpo.append(linha(("", *cel[1:]) if repetida else cel, conj={} if repetida else {"separator": True}))
+        anterior = cel[0]
+    return corpo
 
 
 def _lembrete(e: EventoNotificacao, tz: tzinfo) -> list[dict[str, Any]]:
@@ -179,7 +194,7 @@ def _lembrete(e: EventoNotificacao, tz: tzinfo) -> list[dict[str, Any]]:
     linhas = []
     for p in pendencias:
         inicio = _ts(p["inicio_queda"])
-        porta = _link_txt(p["link_nome"], p["tipo"], p.get("socket", "")) if p["link_nome"] else "Site inteiro"
+        porta = _porta_item(p, "Site inteiro")
         linhas.append((p["site_nome"], porta, formatar_horario(inicio, tz),
                        formatar_duracao((e.ocorrido_em - inicio).total_seconds())))
     corpo += _tabela(("Site", "Porta", "Desde", "Há quanto tempo"), linhas, ("4", "4", "3", "3"))
@@ -227,10 +242,10 @@ def _monitor_iniciado(e: EventoNotificacao, tz: tzinfo) -> list[dict[str, Any]]:
         portas_por_site: dict[str, list[str]] = {}
         for i in d["itens_offline"]:
             portas = portas_por_site.setdefault(i["site_nome"], [])
-            portas.append(_link_txt(i["link_nome"], i["tipo"], i.get("socket", "")) if i["link_nome"] else "Site inteiro (todos os links)")
+            portas.append(_porta_item(i, "Site inteiro (todos os links)"))
         corpo.append(_texto("Já estavam fora no início:", weight="Bolder"))
         corpo += _tabela(("Site", "Portas offline"),
-                         [(site, SEP.join(portas)) for site, portas in portas_por_site.items()], ("1", "1"))
+                        [(site, SEP.join(portas)) for site, portas in portas_por_site.items()], ("1", "1"))
     return corpo
 
 
