@@ -160,7 +160,7 @@ Como responsável pela segurança do host, quero que o container no Podman tenha
 
 **Logs**
 
-- **FR-018**: Os logs do container MUST ir para o journal do systemd e estar acessíveis por `journalctl -u <serviço>` e por `podman logs`. O espaço ocupado pelos logs do serviço MUST ficar limitado a ~50 MB (equivalente aos 10 MB x 5 atuais), descartando os mais antigos, sem depender do limite global do journal do host.
+- **FR-018**: Os logs do container MUST ir para o journal do systemd e estar acessíveis por `journalctl -u <serviço>` e por `podman logs`. O espaço ocupado pelo journal MUST ficar limitado a ~50 MB (equivalente aos 10 MB x 5 atuais), descartando os mais antigos. *Emenda 2026-10-27:* o limite é o global do journal do host (`SystemMaxUse=50M`), porque o namespace de journal por serviço (`LogNamespace=`) faz o `podman stop` falhar com Podman 5.7.0 rootful.
 
 **Build**
 
@@ -207,7 +207,7 @@ Como responsável pela segurança do host, quero que o container no Podman tenha
 - **SC-006**: 100% dos controles de hardening (raiz somente leitura, `/tmp` em tmpfs, zero capabilities, no-new-privileges, UID 10001) são confirmados por inspeção do container em execução.
 - **SC-007**: Uma segunda instância sobre o mesmo volume é recusada em 100% das tentativas.
 - **SC-008**: Ao parar o serviço, o encerramento termina em no máximo 30 s, sem perda de eventos (o que não foi enviado continua na fila).
-- **SC-009**: O espaço ocupado pelos logs do serviço no journal não passa de 55 MB (50 MB de teto mais 10% de tolerância), medido com `journalctl --namespace=cato-monitor --disk-usage`, mesmo após dias de execução contínua.
+- **SC-009**: O espaço ocupado pelo journal não passa de 55 MB (50 MB de teto mais 10% de tolerância), medido com `journalctl --disk-usage`, mesmo após dias de execução contínua.
 - **SC-010**: Nenhuma busca nas camadas e metadados da imagem encontra valores do `.env`.
 - **SC-011**: A suíte de testes automatizados passa sem alterações no código Python da automação.
 - **SC-012**: Um commit novo na branch principal entra em execução na VM em até 15 minutos (5 min de verificação mais build e reinício), sem ação manual.

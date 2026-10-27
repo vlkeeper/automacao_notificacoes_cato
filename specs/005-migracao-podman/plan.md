@@ -89,7 +89,7 @@ deploy/
 ├── cato-deploy.service            # oneshot: roda o script de deploy
 ├── cato-deploy.timer              # OnBootSec=2min, OnUnitActiveSec=5min
 ├── cato-deploy.sh                 # lógica de deploy (instalado em /usr/local/lib/cato-monitor/)
-├── journald@cato-monitor.conf     # SystemMaxUse=50M para o namespace de logs
+├── journald-cato-monitor.conf     # SystemMaxUse=50M (journal global)
 └── install.sh                     # copia os arquivos, cria diretórios/permissões, habilita
 tests/unit/
 ├── test_segredos_repo.py          # já ajustado aos novos nomes

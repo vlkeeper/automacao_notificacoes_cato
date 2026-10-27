@@ -48,7 +48,7 @@ HealthOnFailure=none
 Restart=always
 RestartSec=30
 TimeoutStopSec=45
-# LogNamespace=cato-monitor  -> sujeito ao resultado do experimento R-005
+# sem LogNamespace=: quebra o podman stop (R-005); teto de logs em journald-cato-monitor.conf
 
 [Install]
 WantedBy=multi-user.target
@@ -71,6 +71,6 @@ WantedBy=multi-user.target
 ## Interface do operador
 
 - `sudo systemctl {start|stop|restart|status} cato-monitor` (sem `enable`: unidade gerada; o `[Install]` é aplicado pelo gerador)
-- `journalctl -u cato-monitor -f` (ou `--namespace=cato-monitor`, ver R-005)
+- `journalctl -u cato-monitor -f` (teto global de 50 MB, ver R-005)
 - `sudo podman logs -f cato-monitor`
 - `sudo podman inspect --format '{{.State.Health.Status}}' cato-monitor`

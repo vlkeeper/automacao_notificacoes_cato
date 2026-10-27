@@ -78,7 +78,17 @@ def test_saude_igual_ao_healthcheck_da_imagem(container, containerfile):
 
 
 def test_log_driver_definido(container):
-    assert _um(container, "Container", "LogDriver") in {"journald", "passthrough"}
+    assert _um(container, "Container", "LogDriver") == "journald"
+
+
+def test_sem_log_namespace_que_quebra_a_parada(container):
+    # LogNamespace= põe o serviço num mount namespace próprio e o netavark falha ao limpar a rede (R-005)
+    assert not _valores(container, "Service", "LogNamespace")
+
+
+def test_teto_do_journal_de_50mb():
+    journal = _ler_ini(DEPLOY / "journald-cato-monitor.conf")
+    assert _um(journal, "Journal", "SystemMaxUse") == "50M"
 
 
 def test_recuperacao_sem_limite(container):

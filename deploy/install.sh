@@ -11,7 +11,10 @@ install -d -m 0755 /etc/containers/systemd /etc/cato-monitor /usr/local/lib/cato
 install -d -m 0700 /var/lib/cato-monitor
 
 install -m 0644 "$ORIGEM/cato-monitor.container" "$ORIGEM/cato-monitor.volume" /etc/containers/systemd/
-install -m 0644 "$ORIGEM/journald@cato-monitor.conf" /etc/systemd/
+# Teto de ~50 MB para o journal (global: LogNamespace= quebra a parada do container; ver research R-005).
+install -d -m 0755 /etc/systemd/journald.conf.d
+install -m 0644 "$ORIGEM/journald-cato-monitor.conf" /etc/systemd/journald.conf.d/50-cato-monitor.conf
+rm -f /etc/systemd/journald@cato-monitor.conf
 install -m 0644 "$ORIGEM/cato-deploy.service" "$ORIGEM/cato-deploy.timer" /etc/systemd/system/
 install -m 0755 "$ORIGEM/cato-deploy.sh" /usr/local/lib/cato-monitor/cato-deploy.sh
 
@@ -24,4 +27,5 @@ if [ ! -e /etc/cato-monitor/gitlab-credentials ]; then
 fi
 
 systemctl daemon-reload
+systemctl restart systemd-journald
 echo "Unidades instaladas. Próximos passos: /etc/cato-monitor/.env, build da imagem e 'systemctl start cato-monitor' (o boot é automático; não use enable) (veja o README)."

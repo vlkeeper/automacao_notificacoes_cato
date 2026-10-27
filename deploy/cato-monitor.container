@@ -30,7 +30,6 @@ HealthOnFailure=none
 Restart=always
 RestartSec=30
 TimeoutStopSec=45
-LogNamespace=cato-monitor
 
 [Install]
 WantedBy=multi-user.target

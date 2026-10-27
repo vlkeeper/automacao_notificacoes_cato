@@ -86,7 +86,7 @@ O `cato-monitor.service` é gerado pelo Quadlet: não use `systemctl enable` nel
 |---|---|
 | Iniciar / parar / reiniciar | `sudo systemctl start\|stop\|restart cato-monitor` |
 | Estado | `systemctl status cato-monitor` |
-| Logs (JSON) | `journalctl --namespace=cato-monitor -u cato-monitor -f` · `sudo podman logs -f cato-monitor` |
+| Logs (JSON) | `journalctl -u cato-monitor -f` · `sudo podman logs -f cato-monitor` |
 | Saúde | `sudo podman inspect --format '{{.State.Health.Status}}' cato-monitor` |
 
 - O `.env` fica em `/etc/cato-monitor/.env` com `chmod 600` (só root). Para alterá-lo basta editar e rodar
@@ -99,8 +99,8 @@ O `cato-monitor.service` é gerado pelo Quadlet: não use `systemctl enable` nel
 - A saúde fica `unhealthy` se o último ciclo tiver mais de `3 × INTERVALO + 30 s`; isso só é registrado,
   não reinicia o serviço. O primeiro status confiável aparece após 120 s.
 - Todos os logs saem em JSON no stdout (vão ao journal); token e URLs do Teams/heartbeat são mascarados.
-  O journal do serviço fica limitado a ~50 MB pelo namespace `cato-monitor`
-  (sem `--namespace` o `journalctl` não mostra os logs do monitor; ver `deploy/journald@cato-monitor.conf`).
+  O journal do host fica limitado a ~50 MB (`SystemMaxUse=50M`, instalado pelo `install.sh` em
+  `/etc/systemd/journald.conf.d/`); o limite é global, não só do monitor. Confira com `journalctl --disk-usage`.
 
 ### Recuperação automática
 
@@ -108,7 +108,7 @@ O `cato-monitor.service` é gerado pelo Quadlet: não use `systemctl enable` nel
 - Após reboot da VM o serviço habilitado sobe sozinho, sem login. Isso vale mesmo para um serviço parado
   à mão antes do reboot (diferença aceita em relação ao `unless-stopped` do Compose); `systemctl stop`
   mantém parado até o próximo reboot.
-- Com o `.env` ausente ou inválido o serviço falha e é retentado a cada 30 s (veja `journalctl --namespace=cato-monitor -u
+- Com o `.env` ausente ou inválido o serviço falha e é retentado a cada 30 s (veja `journalctl -u
   cato-monitor`); corrija o arquivo e ele sobe sozinho na próxima tentativa.
 
 ### Primeira instalação numa VM nova
@@ -117,7 +117,7 @@ O `cato-monitor.service` é gerado pelo Quadlet: não use `systemctl enable` nel
 2. Clone o repositório em `/opt/cato-monitor/repo` e entre nele.
 3. `sudo ./deploy/install.sh`, depois `sudo install -m 0600 .env.example /etc/cato-monitor/.env` e preencha.
 4. Construa a imagem (comando acima) e `sudo systemctl start cato-monitor`.
-5. Valide: `systemctl status cato-monitor`, `journalctl --namespace=cato-monitor -u cato-monitor -f` e, depois de 120 s, a saúde
+5. Valide: `systemctl status cato-monitor`, `journalctl -u cato-monitor -f` e, depois de 120 s, a saúde
    `healthy`.
 
 O volume `cato-monitor-data` é criado vazio, com dono `10001:10001`. O primeiro ciclo faz a linha de base:
