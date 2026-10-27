@@ -60,7 +60,8 @@ def test_arquivos_existem_e_sem_publicacao_de_porta(container, volume):
 
 def test_parada_e_init(container):
     assert _um(container, "Container", "StopTimeout") == "30"
-    assert _um(container, "Container", "RunInit") == "true"
+    # sem init: com NoNewPrivileges o catatonit não repassa o SIGTERM (Podman 5.7.0); o monitor trata o sinal
+    assert not _valores(container, "Container", "RunInit")
     assert int(_um(container, "Service", "TimeoutStopSec")) > 30
 
 
@@ -104,6 +105,7 @@ def test_hardening(container):
     assert _um(container, "Container", "NoNewPrivileges") == "true"
     # UID numérico (a resolução do nome "monitor" falha no healthcheck/exec do Podman 5.7); nunca root
     assert _um(container, "Container", "User") == "10001"
+    assert _um(container, "Container", "Group") == "10001"
     assert not _valores(container, "Container", "PublishPort")
 
 

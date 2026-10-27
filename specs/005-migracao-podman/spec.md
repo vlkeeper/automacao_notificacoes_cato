@@ -136,7 +136,7 @@ Como responsável pela segurança do host, quero que o container no Podman tenha
 - **FR-003**: O serviço habilitado MUST iniciar automaticamente no boot da VM, sem depender de login de nenhum usuário.
 - **FR-004**: O serviço MUST ser reiniciado automaticamente pelo systemd quando o processo do monitor terminar com falha, aguardando 30 s entre as tentativas e sem limite de tentativas (o serviço nunca desiste nem fica em estado `failed` por excesso de reinícios).
 - **FR-005**: Após `systemctl stop`, o serviço MUST permanecer parado até um novo `systemctl start` ou até o próximo boot (se habilitado).
-- **FR-006**: Ao parar o serviço, o SIGTERM MUST chegar ao processo do monitor por meio de um processo init no container, e o runtime MUST aguardar 30 s antes de forçar o encerramento.
+- **FR-006**: Ao parar o serviço, o SIGTERM MUST chegar ao processo do monitor, que o trata como PID 1 (um processo init foi descartado: com `no-new-privileges` ele não repassa o sinal no Podman 5.7.0, validado na VM em 2026-10-27), e o runtime MUST aguardar 30 s antes de forçar o encerramento.
 
 **Saúde**
 

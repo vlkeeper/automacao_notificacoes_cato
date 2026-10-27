@@ -11,6 +11,7 @@ Arquivos em `deploy/`, instalados em `/etc/containers/systemd/`. O gerador do Po
 VolumeName=cato-monitor-data
 User=10001
 Group=10001
+Group=10001
 ```
 
 ## `cato-monitor.container`
@@ -26,7 +27,6 @@ StartLimitIntervalSec=0
 ContainerName=cato-monitor
 Image=localhost/cato-monitor:latest
 Pull=never
-RunInit=true
 ReadOnly=true
 Tmpfs=/tmp
 DropCapability=ALL
@@ -61,7 +61,7 @@ WantedBy=multi-user.target
 | Nenhum valor de segredo em `Environment=`; segredos só via `EnvironmentFile` | FR-015 |
 | `ReadOnly`, `Tmpfs=/tmp`, `DropCapability=ALL`, `NoNewPrivileges=true` presentes | FR-014 |
 | Usuário do processo = UID numérico 10001 (`User=10001`, igual ao da imagem); nunca root. Numérico porque o Podman 5.7 não resolve o nome `monitor` no healthcheck/exec | FR-014 |
-| `StopTimeout=30` e `RunInit=true` | FR-006 |
+| `StopTimeout=30`; **sem** `RunInit` (com `NoNewPrivileges=true` o init não repassa o SIGTERM no Podman 5.7.0; o monitor trata o sinal como PID 1 e não cria processos filhos) | FR-006 |
 | Parâmetros de saúde iguais aos do `HEALTHCHECK` do `Containerfile`; `HealthOnFailure=none` | FR-007, FR-009 |
 | `Restart=always`, `RestartSec=30`, `StartLimitIntervalSec=0` | FR-004 |
 | `ContainerName` fixo; sem `Scale`/réplicas | FR-010 |

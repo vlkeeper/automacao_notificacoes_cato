@@ -8,12 +8,12 @@ StartLimitIntervalSec=0
 ContainerName=cato-monitor
 Image=localhost/cato-monitor:latest
 Pull=never
-RunInit=true
 ReadOnly=true
 Tmpfs=/tmp
 DropCapability=ALL
 NoNewPrivileges=true
 User=10001
+Group=10001
 EnvironmentFile=/etc/cato-monitor/.env
 Environment=STATE_DIR=/data
 Volume=cato-monitor.volume:/data

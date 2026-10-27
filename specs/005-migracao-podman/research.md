@@ -19,7 +19,7 @@ que precisa de **validação na VM** (não foi possível executar Podman neste a
 | Compose | Quadlet / systemd |
 |---|---|
 | `restart: unless-stopped` | `[Service] Restart=always`, `RestartSec=30`; `[Unit] StartLimitIntervalSec=0`; `[Install] WantedBy=multi-user.target` |
-| `init: true` | `RunInit=true` |
+| `init: true` | **não migrado**: `RunInit=true` + `NoNewPrivileges=true` impede o SIGTERM de chegar ao monitor (testado na VM em 2026-10-27: parada de 30 s + SIGKILL); sem init o sinal chega em <1 s |
 | `read_only: true` | `ReadOnly=true` |
 | `tmpfs: /tmp` | `Tmpfs=/tmp` |
 | `cap_drop: ALL` | `DropCapability=ALL` |
