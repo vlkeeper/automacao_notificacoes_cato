@@ -13,6 +13,7 @@ ReadOnly=true
 Tmpfs=/tmp
 DropCapability=ALL
 NoNewPrivileges=true
+User=10001
 EnvironmentFile=/etc/cato-monitor/.env
 Environment=STATE_DIR=/data
 Volume=cato-monitor.volume:/data

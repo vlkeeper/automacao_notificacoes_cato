@@ -75,8 +75,10 @@ unidade Quadlet. Confira a versão com `podman --version`. Os arquivos ficam em 
 sudo ./deploy/install.sh                       # instala as unidades; não inicia nada
 sudo install -m 0600 .env.example /etc/cato-monitor/.env   # e preencha os valores
 sudo podman build --format docker -t localhost/cato-monitor:latest -f Containerfile .
-sudo systemctl enable --now cato-monitor
+sudo systemctl start cato-monitor
 ```
+
+O `cato-monitor.service` é gerado pelo Quadlet: não use `systemctl enable` nele (falha com "transient or generated"). O `WantedBy=` do `.container` já o liga ao boot, então ele sobe sozinho após reiniciar a VM.
 
 `--format docker` é necessário para a imagem manter o `HEALTHCHECK`.
 
@@ -84,7 +86,7 @@ sudo systemctl enable --now cato-monitor
 |---|---|
 | Iniciar / parar / reiniciar | `sudo systemctl start\|stop\|restart cato-monitor` |
 | Estado | `systemctl status cato-monitor` |
-| Logs (JSON) | `journalctl -u cato-monitor -f` · `sudo podman logs -f cato-monitor` |
+| Logs (JSON) | `journalctl --namespace=cato-monitor -u cato-monitor -f` · `sudo podman logs -f cato-monitor` |
 | Saúde | `sudo podman inspect --format '{{.State.Health.Status}}' cato-monitor` |
 
 - O `.env` fica em `/etc/cato-monitor/.env` com `chmod 600` (só root). Para alterá-lo basta editar e rodar
@@ -98,7 +100,7 @@ sudo systemctl enable --now cato-monitor
   não reinicia o serviço. O primeiro status confiável aparece após 120 s.
 - Todos os logs saem em JSON no stdout (vão ao journal); token e URLs do Teams/heartbeat são mascarados.
   O journal do serviço fica limitado a ~50 MB pelo namespace `cato-monitor`
-  (`journalctl --namespace=cato-monitor`, ver `deploy/journald@cato-monitor.conf`).
+  (sem `--namespace` o `journalctl` não mostra os logs do monitor; ver `deploy/journald@cato-monitor.conf`).
 
 ### Recuperação automática
 
@@ -106,7 +108,7 @@ sudo systemctl enable --now cato-monitor
 - Após reboot da VM o serviço habilitado sobe sozinho, sem login. Isso vale mesmo para um serviço parado
   à mão antes do reboot (diferença aceita em relação ao `unless-stopped` do Compose); `systemctl stop`
   mantém parado até o próximo reboot.
-- Com o `.env` ausente ou inválido o serviço falha e é retentado a cada 30 s (veja `journalctl -u
+- Com o `.env` ausente ou inválido o serviço falha e é retentado a cada 30 s (veja `journalctl --namespace=cato-monitor -u
   cato-monitor`); corrija o arquivo e ele sobe sozinho na próxima tentativa.
 
 ### Primeira instalação numa VM nova
@@ -114,8 +116,8 @@ sudo systemctl enable --now cato-monitor
 1. Instale Podman 5.7.0, `git`, `curl` e `jq`; garanta NTP ativo.
 2. Clone o repositório em `/opt/cato-monitor/repo` e entre nele.
 3. `sudo ./deploy/install.sh`, depois `sudo install -m 0600 .env.example /etc/cato-monitor/.env` e preencha.
-4. Construa a imagem (comando acima) e `sudo systemctl enable --now cato-monitor`.
-5. Valide: `systemctl status cato-monitor`, `journalctl -u cato-monitor -f` e, depois de 120 s, a saúde
+4. Construa a imagem (comando acima) e `sudo systemctl start cato-monitor`.
+5. Valide: `systemctl status cato-monitor`, `journalctl --namespace=cato-monitor -u cato-monitor -f` e, depois de 120 s, a saúde
    `healthy`.
 
 O volume `cato-monitor-data` é criado vazio, com dono `10001:10001`. O primeiro ciclo faz a linha de base:
@@ -149,7 +151,8 @@ reconstrói a imagem e reinicia o serviço (em até ~15 min do commit). Cada dep
 ### Desinstalação
 
 ```bash
-sudo systemctl disable --now cato-monitor cato-deploy.timer
+sudo systemctl stop cato-monitor
+sudo systemctl disable --now cato-deploy.timer
 sudo rm /etc/containers/systemd/cato-monitor.{container,volume} /etc/systemd/system/cato-deploy.{service,timer}
 sudo systemctl daemon-reload
 ```

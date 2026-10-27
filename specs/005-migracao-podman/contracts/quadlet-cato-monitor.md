@@ -31,6 +31,7 @@ ReadOnly=true
 Tmpfs=/tmp
 DropCapability=ALL
 NoNewPrivileges=true
+User=10001
 EnvironmentFile=/etc/cato-monitor/.env
 Environment=STATE_DIR=/data
 Volume=cato-monitor.volume:/data
@@ -59,7 +60,7 @@ WantedBy=multi-user.target
 |---|---|
 | Nenhum valor de segredo em `Environment=`; segredos só via `EnvironmentFile` | FR-015 |
 | `ReadOnly`, `Tmpfs=/tmp`, `DropCapability=ALL`, `NoNewPrivileges=true` presentes | FR-014 |
-| Usuário do processo = o da imagem (UID 10001); não há `User=root` | FR-014 |
+| Usuário do processo = UID numérico 10001 (`User=10001`, igual ao da imagem); nunca root. Numérico porque o Podman 5.7 não resolve o nome `monitor` no healthcheck/exec | FR-014 |
 | `StopTimeout=30` e `RunInit=true` | FR-006 |
 | Parâmetros de saúde iguais aos do `HEALTHCHECK` do `Containerfile`; `HealthOnFailure=none` | FR-007, FR-009 |
 | `Restart=always`, `RestartSec=30`, `StartLimitIntervalSec=0` | FR-004 |
@@ -69,7 +70,7 @@ WantedBy=multi-user.target
 
 ## Interface do operador
 
-- `sudo systemctl {start|stop|restart|status|enable --now} cato-monitor`
+- `sudo systemctl {start|stop|restart|status} cato-monitor` (sem `enable`: unidade gerada; o `[Install]` é aplicado pelo gerador)
 - `journalctl -u cato-monitor -f` (ou `--namespace=cato-monitor`, ver R-005)
 - `sudo podman logs -f cato-monitor`
 - `sudo podman inspect --format '{{.State.Health.Status}}' cato-monitor`

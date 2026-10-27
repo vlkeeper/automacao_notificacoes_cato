@@ -30,7 +30,7 @@ Projeto único existente: `deploy/` (novo, artefatos instalados no host), `tests
 **Purpose**: decidir o ponto de risco da spec e preparar a estrutura.
 
 - [X] T001 Criar a pasta `deploy/` na raiz do repositório e acrescentar a linha `deploy/` em `.containerignore` para que fique fora do contexto de build (research R-006).
-- [ ] T002 (VM) Executar o experimento de logs do research R-005: rodar um container de teste com `--log-driver journald` sob uma unidade com `LogNamespace=cato-monitor` e conferir com `journalctl --namespace=cato-monitor` e `journalctl` (padrão) em qual journal as linhas caem. Registrar o resultado e a escolha (`journald`+namespace, `passthrough`+namespace, ou teto global com emenda a FR-018) na seção R-005 de `specs/005-migracao-podman/research.md`.
+- [X] T002 (VM) Executar o experimento de logs do research R-005: rodar um container de teste com `--log-driver journald` sob uma unidade com `LogNamespace=cato-monitor` e conferir com `journalctl --namespace=cato-monitor` e `journalctl` (padrão) em qual journal as linhas caem. Registrar o resultado e a escolha (`journald`+namespace, `passthrough`+namespace, ou teto global com emenda a FR-018) na seção R-005 de `specs/005-migracao-podman/research.md`.
 
 **Checkpoint**: a estratégia de logs está decidida; T008, T009 e T014 dependem dela.
 

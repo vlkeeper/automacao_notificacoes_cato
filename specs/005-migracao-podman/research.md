@@ -58,11 +58,16 @@ continua mantendo parado (FR-005). `StartLimitIntervalSec=0` remove o limite de 
 
 ## R-005 — Logs no journal limitados a ~50 MB  ⚠ risco principal
 
-- **Decision (a validar)**: `LogDriver=journald` + `LogNamespace=cato-monitor` no `[Service]` +
+- **Decision (validada na VM em 2026-10-27, Podman 5.7.0)**: `LogDriver=journald` + `LogNamespace=cato-monitor` no `[Service]` +
   `/etc/systemd/journald@cato-monitor.conf` com `SystemMaxUse=50M` (e `RuntimeMaxUse=50M`).
   Leitura: `journalctl --namespace=cato-monitor -u cato-monitor` e `podman logs cato-monitor`.
 - **Rationale**: o namespace de journal é a forma de dar um teto próprio aos logs do serviço, sem
   mexer no limite global do host (FR-018, SC-009).
+- **Resultado do experimento (T002)**: `systemd-run -p LogNamespace=cato-teste podman run --log-driver journald …`
+  gravou a linha de teste **somente** em `journalctl --namespace=cato-teste`; `journalctl CONTAINER_NAME=…` no journal
+  padrão não achou nada. O risco abaixo não se confirmou: ficam `journald` + `LogNamespace`, sem fallback e sem
+  emenda a FR-018. (A linha apareceu duas vezes porque o teste rodou `podman run` em primeiro plano; o serviço Quadlet
+  roda desacoplado.)
 - **Risco**: com `--log-driver journald`, quem grava no journal é o `conmon`, e ele envia ao socket do
   namespace **padrão**, não ao do `LogNamespace` da unidade. Se for o caso, as linhas caem no journal
   global e o teto de 50 MB não vale.

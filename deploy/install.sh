@@ -24,4 +24,4 @@ if [ ! -e /etc/cato-monitor/gitlab-credentials ]; then
 fi
 
 systemctl daemon-reload
-echo "Unidades instaladas. Próximos passos: /etc/cato-monitor/.env, build da imagem e 'systemctl enable --now cato-monitor' (veja o README)."
+echo "Unidades instaladas. Próximos passos: /etc/cato-monitor/.env, build da imagem e 'systemctl start cato-monitor' (o boot é automático; não use enable) (veja o README)."

@@ -18,7 +18,8 @@ sudo deploy/install.sh      # copia unidades e script, cria /etc/cato-monitor e 
 sudo cp .env.example /etc/cato-monitor/.env && sudoedit /etc/cato-monitor/.env && sudo chmod 600 /etc/cato-monitor/.env
 sudoedit /etc/cato-monitor/gitlab-credentials   # 0600
 sudo systemctl start cato-deploy.service        # 1º build + tag latest
-sudo systemctl enable --now cato-monitor.service cato-deploy.timer
+sudo systemctl start cato-monitor.service   # unidade gerada pelo Quadlet: sem 'enable'
+sudo systemctl enable --now cato-deploy.timer
 ```
 
 Esperado: `systemctl status cato-monitor` ativo; um card `MONITOR INICIADO`; sem alertas em massa (SC-005).

@@ -102,7 +102,8 @@ def test_hardening(container):
     assert _um(container, "Container", "Tmpfs") == "/tmp"
     assert _um(container, "Container", "DropCapability") == "ALL"
     assert _um(container, "Container", "NoNewPrivileges") == "true"
-    assert not _valores(container, "Container", "User")
+    # UID numérico (a resolução do nome "monitor" falha no healthcheck/exec do Podman 5.7); nunca root
+    assert _um(container, "Container", "User") == "10001"
     assert not _valores(container, "Container", "PublishPort")
 
 
