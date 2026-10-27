@@ -6,7 +6,7 @@
 # Controle de versão e documentação de design
 .git/
 .gitignore
-.dockerignore
+.containerignore
 specs/
 .specify/
 .claude/
@@ -37,3 +37,4 @@ data/
 Thumbs.db
 previas/
 scripts/
+deploy/

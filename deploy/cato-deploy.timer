@@ -1,0 +1,10 @@
+[Unit]
+Description=Verifica a cada 5 minutos se há commit novo do Monitor de Sockets Cato
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

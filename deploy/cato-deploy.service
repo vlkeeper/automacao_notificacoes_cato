@@ -1,0 +1,9 @@
+[Unit]
+Description=Deploy automático do Monitor de Sockets Cato
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/cato-monitor/cato-deploy.sh
+TimeoutStartSec=20min

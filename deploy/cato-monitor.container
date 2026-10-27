@@ -1,0 +1,35 @@
+[Unit]
+Description=Monitor de Sockets Cato
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Container]
+ContainerName=cato-monitor
+Image=localhost/cato-monitor:latest
+Pull=never
+RunInit=true
+ReadOnly=true
+Tmpfs=/tmp
+DropCapability=ALL
+NoNewPrivileges=true
+EnvironmentFile=/etc/cato-monitor/.env
+Environment=STATE_DIR=/data
+Volume=cato-monitor.volume:/data
+StopTimeout=30
+LogDriver=journald
+HealthCmd=python -m cato_monitor.healthcheck
+HealthInterval=60s
+HealthTimeout=5s
+HealthStartPeriod=120s
+HealthRetries=3
+HealthOnFailure=none
+
+[Service]
+Restart=always
+RestartSec=30
+TimeoutStopSec=45
+LogNamespace=cato-monitor
+
+[Install]
+WantedBy=multi-user.target

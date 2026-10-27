@@ -1,5 +1,17 @@
 # Changelog
 
+## Não lançado — feature 005: migração para Podman
+
+- A execução passa de Docker Compose para **Podman + systemd (Quadlet)**: `Dockerfile` → `Containerfile`,
+  `.dockerignore` → `.containerignore`, `docker-compose.yml` removido; unidades em `deploy/`.
+- Reinício automático a cada 30 s sem limite, volume `cato-monitor-data` com dono 10001 e logs no journal
+  (namespace `cato-monitor`, ~50 MB).
+- **Deploy automático**: `cato-deploy.timer` consulta o GitLab a cada 5 min, reconstrói a imagem e reinicia o
+  serviço, com cards `DEPLOY CONCLUÍDO`/`DEPLOY FALHOU` no canal operacional.
+- **Exige ação na atualização:** instalar com `deploy/install.sh`; o `.env` passa a ficar em
+  `/etc/cato-monitor/.env` e o estado migra para o volume Podman (veja o README).
+- Constituição emendada para 1.0.1 (runtime OCI com Podman). Código em `src/` inalterado.
+
 ## Não lançado — feature 004: aviso único por socket em sites HA
 
 - Novos avisos `SOCKET OFFLINE` / `SOCKET DE VOLTA` (canal de rede) quando um socket de um par HA

@@ -22,10 +22,6 @@ credentials*
 id_rsa*
 id_ed25519*
 
-# Overrides locais do Docker (podem conter segredos)
-docker-compose.override.yml
-docker-compose.*.local.yml
-
 # Estado do monitor (gerado em execução)
 state.json*
 last_cycle
